@@ -1,0 +1,94 @@
+import { supabase } from "@/lib/supabase";
+
+/**
+ * Service: {{name}}Service
+ * 
+ * This service handles all business logic and data fetching for the {{name}} domain.
+ * It abstracts the database implementation and provides a clean interface for UI components.
+ */
+
+export const {{name}}Service = {
+  /**
+   * Fetch all {{name}} records
+   */
+  async getAll() {
+    const { data, error } = await supabase
+      .from('{{table_name}}')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching {{name}}:', error);
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  /**
+   * Fetch a single {{name}} record by ID
+   */
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('{{table_name}}')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error(`Error fetching {{name}} with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  /**
+   * Create a new {{name}} record
+   */
+  async create(payload) {
+    const { data, error } = await supabase
+      .from('{{table_name}}')
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating {{name}}:', error);
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  /**
+   * Update an existing {{name}} record
+   */
+  async update(id, payload) {
+    const { data, error } = await supabase
+      .from('{{table_name}}')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`Error updating {{name}} with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
+    return data;
+  },
+
+  /**
+   * Delete a {{name}} record
+   */
+  async delete(id) {
+    const { error } = await supabase
+      .from('{{table_name}}')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(`Error deleting {{name}} with ID ${id}:`, error);
+      throw new Error(error.message);
+    }
+    return true;
+  }
+};
