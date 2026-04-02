@@ -30,6 +30,8 @@ export default async function RootPage() {
   // Send to the correct portal based on role
   if (profile?.role === "admin") {
     redirect("/admin");
+  } else if (profile?.role === "it_staff" || profile?.role === "it-staff") {
+    redirect("/it-staff");
   } else {
     redirect("/employee");
   }

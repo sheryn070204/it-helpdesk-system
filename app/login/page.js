@@ -1,58 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { loginAction } from "@/app/auth/actions";
 
 /**
- * LoginPage — Client component for email/password authentication.
- * On success, fetches the user's role from the profiles table
- * and redirects to the correct portal (/employee or /admin).
+ * LoginPage — updated to use server actions for smoother login transitions.
  */
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e) {
+  async function handleFormSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Sign in with email and password via Supabase Auth
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const formData = new FormData(e.currentTarget);
+    const result = await loginAction(formData);
 
-    if (authError) {
-      setError(authError.message);
+    if (result?.error) {
+      setError(result.error);
       setLoading(false);
-      return;
     }
-
-    // Fetch role from profiles table to determine where to redirect
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-
-    if (profileError || !profile) {
-      setError("Could not fetch your profile. Please contact support.");
-      setLoading(false);
-      return;
-    }
-
-    // Redirect based on role
-    if (profile.role === "admin") {
-      router.push("/admin");
-    } else {
-      router.push("/employee");
-    }
+    // Success results in a server-side redirect handled in loginAction
   }
 
   return (
@@ -71,7 +42,7 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleFormSubmit} className="space-y-5">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
@@ -89,10 +60,9 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400"
               />
@@ -105,10 +75,9 @@ export default function LoginPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400"
               />

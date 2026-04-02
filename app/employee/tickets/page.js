@@ -1,168 +1,133 @@
-import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
+import Link from "next/link";
 
-/**
- * MyTicketsPage — shows all tickets submitted by the current employee.
- *
- * - Sorted newest first
- * - Each row shows: title, priority badge, status badge, and date
- * - Shows a success banner when redirected from the submit page (?submitted=true)
- * - RLS in Supabase ensures employees can ONLY see their own tickets
- */
-export default async function MyTicketsPage({ searchParams }) {
+export default async function EmployeeTicketsPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
-
-  // Fetch all tickets for this user, newest first
-  const { data: tickets, error } = await supabase
+  const { data: tickets } = await supabase
     .from("tickets")
-    .select("id, title, description, priority, status, created_at")
+    .select("id, title, priority, status, created_at, description")
     .eq("submitted_by", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700">
-        Failed to load tickets: {error.message}
-      </div>
-    );
-  }
-
-  // Check if user was just redirected here after submitting a ticket
-  const justSubmitted = (await searchParams)?.submitted === "true";
+  const isEmpty = !tickets || tickets.length === 0;
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
-        <p className="text-gray-500 mt-1">All IT requests you have submitted.</p>
-      </div>
-
-      {/* Success Banner — shown after a ticket is submitted */}
-      {justSubmitted && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* ─── Page Header ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
           <div>
-            <p className="font-semibold text-green-800">Ticket submitted successfully!</p>
-            <p className="text-sm text-green-600">Our IT team has been notified and will get back to you soon.</p>
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your Requests</h1>
+            <p className="text-sm font-medium text-gray-500 mt-1">
+              Track the status of all IT tickets you've submitted.
+            </p>
           </div>
         </div>
-      )}
+        <Link
+          href="/employee/submit"
+          className="inline-flex justify-center items-center gap-2 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-[0_4px_14px_0_rgb(37,99,235,0.2)] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)] hover:-translate-y-0.5"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+          New Request
+        </Link>
+      </div>
 
-      {/* Tickets List */}
-      {tickets.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-16 text-center">
-          <div className="text-5xl mb-3">📭</div>
-          <p className="font-semibold text-gray-700">No tickets yet</p>
-          <p className="text-sm text-gray-400 mt-1 mb-6">
-            When you submit an IT request, it will appear here.
+      {/* ─── Tickets List ─── */}
+      {isEmpty ? (
+        <div className="bg-white border text-center p-16 rounded-[3rem] border-dashed border-gray-200">
+          <span className="text-4xl block mb-4">📭</span>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">No Requests Found</h3>
+          <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+            You haven't submitted any IT tickets yet. If you need assistance, creating a request takes just a minute!
           </p>
           <Link
             href="/employee/submit"
-            className="inline-block px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+            className="text-blue-600 font-bold hover:text-blue-800 transition-colors"
           >
-            Submit Your First Ticket
+            Create Your First Request &rarr;
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Table Header */}
-          <div className="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-            <div className="col-span-5">Title</div>
-            <div className="col-span-2 text-center">Priority</div>
-            <div className="col-span-2 text-center">Status</div>
-            <div className="col-span-3 text-right">Submitted</div>
-          </div>
-
-          {/* Table Rows */}
-          <ul className="divide-y divide-gray-50">
-            {tickets.map((ticket) => (
-              <li
-                key={ticket.id}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="sm:grid sm:grid-cols-12 sm:gap-4 sm:items-center">
-                  {/* Title */}
-                  <div className="col-span-5 min-w-0 mb-2 sm:mb-0">
-                    <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate sm:hidden">
-                      {new Date(ticket.created_at).toLocaleDateString("en-US", {
-                        year: "numeric", month: "short", day: "numeric",
-                      })}
-                    </p>
-                  </div>
-
-                  {/* Priority */}
-                  <div className="col-span-2 flex sm:justify-center mb-2 sm:mb-0">
-                    <PriorityBadge priority={ticket.priority} />
-                  </div>
-
-                  {/* Status */}
-                  <div className="col-span-2 flex sm:justify-center mb-2 sm:mb-0">
-                    <StatusBadge status={ticket.status} />
-                  </div>
-
-                  {/* Date */}
-                  <div className="col-span-3 hidden sm:block text-right">
-                    <p className="text-sm text-gray-400">
-                      {new Date(ticket.created_at).toLocaleDateString("en-US", {
-                        year: "numeric", month: "short", day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Short description preview */}
-                <p className="text-xs text-gray-400 mt-2 line-clamp-2 leading-relaxed">
-                  {ticket.description}
-                </p>
-              </li>
-            ))}
-          </ul>
+        <div className="grid gap-4">
+          {tickets.map((ticket) => (
+            <TicketCard key={ticket.id} ticket={ticket} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Reusable Badge Components ───
-
-function PriorityBadge({ priority }) {
-  const styles = {
-    critical: "bg-red-100 text-red-700 ring-1 ring-red-200",
-    high:     "bg-orange-100 text-orange-700 ring-1 ring-orange-200",
-    medium:   "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200",
-    low:      "bg-green-100 text-green-700 ring-1 ring-green-200",
+// ─── Ticket Card Component ───
+function TicketCard({ ticket }) {
+  const priorityStyles = {
+    critical: "bg-red-50 text-red-700 border-red-200",
+    high: "bg-orange-50 text-orange-700 border-orange-200",
+    medium: "bg-amber-50 text-amber-700 border-amber-200",
+    low: "bg-green-50 text-green-700 border-green-200",
   };
-  const labels = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${styles[priority] ?? "bg-gray-100 text-gray-600"}`}>
-      {labels[priority] ?? priority}
-    </span>
-  );
-}
 
-function StatusBadge({ status }) {
-  const styles = {
-    open:        "bg-blue-100 text-blue-700 ring-1 ring-blue-200",
-    in_progress: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
-    resolved:    "bg-green-100 text-green-700 ring-1 ring-green-200",
+  const statusStyles = {
+    open: "bg-blue-50 text-blue-700",
+    in_progress: "bg-amber-50 text-amber-700",
+    resolved: "bg-green-50 text-green-700",
   };
-  const labels = { open: "Open", in_progress: "In Progress", resolved: "Resolved" };
+
+  const statusLabels = {
+    open: "Open",
+    in_progress: "In Progress",
+    resolved: "Resolved"
+  };
+
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${styles[status] ?? "bg-gray-100 text-gray-600"}`}>
-      {labels[status] ?? status}
-    </span>
+    <div className="bg-white rounded-[2rem] p-6 sm:p-8 border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-3 mb-3">
+            <span className={`px-3 py-1 text-[11px] font-black uppercase tracking-widest rounded-lg border ${priorityStyles[ticket.priority]}`}>
+              {ticket.priority} priority
+            </span>
+            <span className="text-sm font-medium text-gray-400">
+              Submitted {new Date(ticket.created_at).toLocaleDateString()}
+            </span>
+          </div>
+
+          <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
+            {ticket.title}
+          </h3>
+          <p className="text-gray-500 text-sm leading-relaxed line-clamp-2">
+            {ticket.description}
+          </p>
+        </div>
+
+        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between shrink-0 gap-4">
+          <div className={`px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-sm ${statusStyles[ticket.status]}`}>
+            {ticket.status === 'in_progress' && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              </span>
+            )}
+            {ticket.status === 'open' && <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>}
+            {ticket.status === 'resolved' && <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>}
+            {statusLabels[ticket.status] || ticket.status}
+          </div>
+          
+          <span className="text-xs font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+            ID: {ticket.id.slice(0, 8)}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

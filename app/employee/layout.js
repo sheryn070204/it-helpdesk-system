@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
+import NotificationBell from "@/components/NotificationBell";
 
 /**
  * EmployeeLayout — wraps all pages under /employee/*.
@@ -31,9 +32,12 @@ export default async function EmployeeLayout({ children }) {
     .eq("id", user.id)
     .single();
 
-  // If not an employee (e.g. admin), redirect to the correct portal
+  // If not an employee, redirect to the correct portal based on their role
   if (!profile || profile.role !== "employee") {
-    redirect("/admin");
+    if (profile?.role === "admin") redirect("/admin");
+    if (profile?.role === "it_staff" || profile?.role === "it-staff") redirect("/it-staff");
+    // Unknown role or no profile — boot to login
+    redirect("/login");
   }
 
   async function handleSignOut() {
@@ -82,7 +86,9 @@ export default async function EmployeeLayout({ children }) {
             </div>
 
             {/* User Info + Sign Out */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <NotificationBell role="employee" />
+              <div className="flex items-center gap-3">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-gray-900">{profile.full_name}</p>
                 <p className="text-xs text-gray-400">Employee</p>
@@ -98,6 +104,7 @@ export default async function EmployeeLayout({ children }) {
                   Sign out
                 </button>
               </form>
+              </div>
             </div>
           </div>
         </div>

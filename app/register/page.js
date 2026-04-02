@@ -1,75 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { registerAction } from "@/app/auth/actions";
 
 /**
  * RegisterPage — allows new employees to create an account.
- * Role is ALWAYS set to 'employee' — admin accounts must be
- * created manually inside the Supabase dashboard.
- *
- * Flow:
- * 1. Create auth user via Supabase Auth
- * 2. Insert a matching row into the `profiles` table
- * 3. Redirect to /employee portal
+ * Updated to use server actions for a cleaner, reliable registration flow.
  */
 export default function RegisterPage() {
-  const router = useRouter();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleRegister(e) {
+  async function handleFormSubmit(e) {
     e.preventDefault();
+    setLoading(true);
     setError("");
 
-    // Client-side password match validation
-    if (password !== confirmPassword) {
-      setError("Passwords do not match. Please try again.");
-      return;
-    }
+    const formData = new FormData(e.currentTarget);
+    const result = await registerAction(formData);
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    setLoading(true);
-
-    // Step 1: Create the auth user in Supabase
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
+    if (result?.error) {
+      setError(result.error);
       setLoading(false);
-      return;
     }
-
-    // Step 2: Insert the profile row with full_name and role = 'employee'
-    const { error: profileError } = await supabase.from("profiles").insert([
-      {
-        id: data.user.id,
-        full_name: fullName,
-        role: "employee", // Always employee — never admin from this page
-      },
-    ]);
-
-    if (profileError) {
-      setError("Account created but profile setup failed. Please contact support.");
-      setLoading(false);
-      return;
-    }
-
-    // Step 3: Redirect to employee portal
-    router.push("/employee");
   }
 
   return (
@@ -88,7 +42,7 @@ export default function RegisterPage() {
 
         {/* Register Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <form onSubmit={handleRegister} className="space-y-5">
+          <form onSubmit={handleFormSubmit} className="space-y-5">
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
@@ -106,10 +60,9 @@ export default function RegisterPage() {
               </label>
               <input
                 id="fullName"
+                name="fullName"
                 type="text"
                 required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
                 placeholder="John Smith"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400"
               />
@@ -122,10 +75,9 @@ export default function RegisterPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400"
               />
@@ -138,27 +90,10 @@ export default function RegisterPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400"
-              />
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="confirmPassword">
-                Confirm Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter your password"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400"
               />
             </div>

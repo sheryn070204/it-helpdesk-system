@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
+import NotificationBell from "@/components/NotificationBell";
 
 /**
  * AdminLayout — wraps all pages under /admin/*.
@@ -29,8 +30,9 @@ export default async function AdminLayout({ children }) {
     .eq("id", user.id)
     .single();
 
-  // Only admins allowed — employees go to their portal
+  // Only admins allowed — route other roles to their correct portal
   if (!profile || profile.role !== "admin") {
+    if (profile?.role === "it_staff" || profile?.role === "it-staff") redirect("/it-staff");
     redirect("/employee");
   }
 
@@ -101,9 +103,12 @@ export default async function AdminLayout({ children }) {
           <div>
             <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">IT Operations Center</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-slate-500 font-mono">SYSTEM ONLINE</span>
+          <div className="flex items-center gap-4">
+            <NotificationBell role="admin" />
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-slate-500 font-mono">SYSTEM ONLINE</span>
+            </div>
           </div>
         </header>
 

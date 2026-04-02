@@ -6,8 +6,6 @@ import { supabase } from "@/lib/supabase";
 
 // ─────────────────────────────────────────────
 // PRIORITY DETECTION ENGINE
-// Scans the description text in real-time and
-// returns the highest matching priority level.
 // ─────────────────────────────────────────────
 const PRIORITY_RULES = [
   {
@@ -20,9 +18,9 @@ const PRIORITY_RULES = [
       "security incident", "intrusion",
     ],
     message: "Security-related keywords detected. This will be treated as an emergency.",
-    badgeClass: "bg-red-100 border-red-300 text-red-800",
+    badgeClass: "bg-red-50 border-red-200 text-red-700",
     dotClass: "bg-red-500",
-    iconBg: "bg-red-500",
+    scaleClass: "bg-red-500"
   },
   {
     level: "high",
@@ -35,9 +33,9 @@ const PRIORITY_RULES = [
       "bsod", "not responding", "wont start", "won't start",
     ],
     message: "Critical failure keywords found. This issue will be escalated quickly.",
-    badgeClass: "bg-orange-100 border-orange-300 text-orange-800",
+    badgeClass: "bg-orange-50 border-orange-200 text-orange-700",
     dotClass: "bg-orange-500",
-    iconBg: "bg-orange-500",
+    scaleClass: "bg-orange-500"
   },
   {
     level: "medium",
@@ -50,73 +48,48 @@ const PRIORITY_RULES = [
       "occasionally", "unstable",
     ],
     message: "Performance or intermittent issue keywords detected.",
-    badgeClass: "bg-yellow-100 border-yellow-300 text-yellow-800",
-    dotClass: "bg-yellow-500",
-    iconBg: "bg-yellow-500",
+    badgeClass: "bg-amber-50 border-amber-200 text-amber-700",
+    dotClass: "bg-amber-500",
+    scaleClass: "bg-amber-500"
   },
 ];
 
-/**
- * detectPriority — scans text and returns the highest priority match.
- * Returns an object with { level, label, badgeClass, dotClass, iconBg, message, detectedKeywords }
- */
 function detectPriority(text) {
   const lower = text.toLowerCase();
-
   for (const rule of PRIORITY_RULES) {
     const found = rule.keywords.filter((kw) => lower.includes(kw));
     if (found.length > 0) {
       return { ...rule, detectedKeywords: found };
     }
   }
-
-  // Default: LOW priority
   return {
     level: "low",
     label: "LOW PRIORITY",
     color: "green",
-    message: "No urgent keywords detected. This will be handled in normal queue.",
-    badgeClass: "bg-green-100 border-green-300 text-green-800",
+    message: "No urgent keywords detected. Handled in the normal queue.",
+    badgeClass: "bg-green-50 border-green-200 text-green-700",
     dotClass: "bg-green-500",
-    iconBg: "bg-green-500",
+    scaleClass: "bg-green-500",
     detectedKeywords: [],
   };
 }
 
-// ─────────────────────────────────────────────
-// SUBMIT TICKET PAGE
-// The standout feature of this application.
-// ─────────────────────────────────────────────
-
-/**
- * SubmitTicketPage — allows an employee to submit a new IT ticket.
- *
- * STANDOUT FEATURE: Live Priority Detection
- *   - As the user types the description, keywords are scanned instantly
- *   - A color-coded priority badge appears and updates in real time
- *   - The employee never manually picks priority — it is auto-detected
- *   - The detected priority level is saved with the ticket on submission
- */
 export default function SubmitTicketPage() {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState(detectPriority("")); // Start at LOW
+  const [priority, setPriority] = useState(detectPriority(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [animating, setAnimating] = useState(false);
 
-  // Re-run detection every time description changes
   useEffect(() => {
     const detected = detectPriority(description);
-
-    // Only animate if priority level actually changed
     if (detected.level !== priority.level) {
       setAnimating(true);
-      setTimeout(() => setAnimating(false), 400);
+      setTimeout(() => setAnimating(false), 500);
     }
-
     setPriority(detected);
   }, [description]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -125,7 +98,6 @@ export default function SubmitTicketPage() {
     setLoading(true);
     setError("");
 
-    // Get the current authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
@@ -134,12 +106,11 @@ export default function SubmitTicketPage() {
       return;
     }
 
-    // Insert the new ticket into Supabase
     const { error: insertError } = await supabase.from("tickets").insert([
       {
         title: title.trim(),
         description: description.trim(),
-        priority: priority.level,  // The auto-detected priority
+        priority: priority.level,
         status: "open",
         submitted_by: user.id,
       },
@@ -151,40 +122,42 @@ export default function SubmitTicketPage() {
       return;
     }
 
-    // Redirect to tickets list with success message in URL
     router.push("/employee/tickets?submitted=true");
   }
 
   const charCount = description.length;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Submit IT Request</h1>
-        <p className="text-gray-500 mt-1">
-          Describe your issue and our team will get back to you as soon as possible.
+    <div className="max-w-3xl mx-auto">
+      {/* ─── Hero Header ─── */}
+      <div className="mb-10 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-6 shadow-sm">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </div>
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Submit It Request</h1>
+        <p className="text-gray-500 mt-3 text-lg max-w-xl mx-auto">
+          Describe the problem you're experiencing. We use automated keyword detection to route your ticket immediately.
         </p>
       </div>
 
-      {/* Form Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* ─── Form Card ─── */}
+      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-6">
-            {/* Error */}
+          <div className="p-8 md:p-12 space-y-8">
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4">
+                <svg className="w-6 h-6 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-red-800 font-medium">{error}</p>
               </div>
             )}
 
-            {/* Title Field */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="title">
-                Issue Title <span className="text-red-500">*</span>
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-gray-800 tracking-wide uppercase" htmlFor="title">
+                What do you need help with? <span className="text-blue-500">*</span>
               </label>
               <input
                 id="title"
@@ -192,132 +165,112 @@ export default function SubmitTicketPage() {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Cannot connect to company VPN"
+                placeholder="e.g. Can't connect to the printer"
                 maxLength={120}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400 text-sm"
+                className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-400 text-lg font-medium"
               />
             </div>
 
-            {/* Description Field */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-gray-700" htmlFor="description">
-                  Describe the Problem <span className="text-red-500">*</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-bold text-gray-800 tracking-wide uppercase" htmlFor="description">
+                  Details <span className="text-blue-500">*</span>
                 </label>
-                <span className="text-xs text-gray-400">{charCount} characters</span>
+                <div className="text-sm font-medium text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                  {charCount} chars
+                </div>
               </div>
-
-              <p className="text-xs text-gray-400 mb-2">
-                💡 <strong>Tip:</strong> The more detail you provide, the faster we can help. Mention what happened, when it started, and what you&apos;ve tried.
-              </p>
 
               <textarea
                 id="description"
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. My laptop crashed this morning with a blue screen error. It keeps restarting every 10 minutes. I tried restarting it but the problem persists..."
-                rows={7}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 placeholder-gray-400 text-sm resize-none"
+                placeholder="Share any error messages, what you were trying to do, and when it started..."
+                rows={6}
+                className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-400 text-base resize-none"
               />
             </div>
 
-            {/* ═══════════════════════════════════════════════════ */}
-            {/* LIVE PRIORITY DETECTION BADGE — The standout feature */}
-            {/* ═══════════════════════════════════════════════════ */}
-            <div
-              className={`rounded-xl border-2 p-4 transition-all duration-300 ${priority.badgeClass} ${
-                animating ? "scale-[1.02] shadow-md" : "scale-100"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {/* Pulsing dot */}
-                <div className="flex-shrink-0 mt-0.5 relative">
-                  <span className={`block w-3 h-3 rounded-full ${priority.dotClass}`} />
-                  {priority.level !== "low" && (
-                    <span className={`absolute inset-0 w-3 h-3 rounded-full ${priority.dotClass} animate-ping opacity-60`} />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm tracking-wide">
-                      {priority.label}
-                    </span>
-                    <span className="text-xs opacity-60 italic">
-                      — auto-detected
-                    </span>
+            {/* ─── Animated Priority Badge ─── */}
+            <div className="pt-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">
+                Automated System Analysis
+              </p>
+              <div
+                className={`rounded-2xl border-2 p-5 transition-all duration-500 ease-out ${priority.badgeClass} ${
+                  animating ? "scale-105 shadow-xl -rotate-1" : "scale-100 shadow-sm"
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 mt-1 relative">
+                    <span className={`block w-4 h-4 rounded-full ${priority.dotClass}`} />
+                    {priority.level !== "low" && (
+                      <span className={`absolute inset-0 w-4 h-4 rounded-full ${priority.dotClass} animate-ping opacity-75`} />
+                    )}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-extrabold text-lg tracking-tight mb-1">
+                      {priority.label}
+                    </h4>
+                    <p className="text-sm font-medium opacity-80 mb-3">{priority.message}</p>
 
-                  <p className="text-sm mt-1 opacity-80">{priority.message}</p>
-
-                  {/* Show which keywords triggered the priority */}
-                  {priority.detectedKeywords && priority.detectedKeywords.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <span className="text-xs opacity-60 font-medium">Keywords detected:</span>
-                      {priority.detectedKeywords.map((kw) => (
-                        <span
-                          key={kw}
-                          className="inline-block bg-white bg-opacity-60 border border-current border-opacity-30 rounded-full px-2 py-0.5 text-xs font-semibold"
-                        >
-                          {kw}
-                        </span>
+                    <div className="h-2 w-full bg-black/5 rounded-full overflow-hidden flex">
+                      {["low", "medium", "high", "critical"].map((lvl) => (
+                        <div
+                          key={lvl}
+                          className={`flex-1 h-full transition-colors duration-500 ${
+                            priority.level === "critical" ? "bg-red-500" :
+                            priority.level === "high" && ["low", "medium", "high"].includes(lvl) ? "bg-orange-500" :
+                            priority.level === "medium" && ["low", "medium"].includes(lvl) ? "bg-amber-500" :
+                            priority.level === "low" && lvl === "low" ? "bg-green-500" :
+                            "bg-transparent"
+                          }`}
+                        />
                       ))}
                     </div>
-                  )}
 
-                  {/* Visual priority scale */}
-                  <div className="mt-3 grid grid-cols-4 gap-1">
-                    {["low", "medium", "high", "critical"].map((lvl) => (
-                      <div
-                        key={lvl}
-                        className={`h-1.5 rounded-full transition-all duration-500 ${
-                          lvl === priority.level
-                            ? priority.level === "critical" ? "bg-red-500"
-                            : priority.level === "high" ? "bg-orange-500"
-                            : priority.level === "medium" ? "bg-yellow-500"
-                            : "bg-green-500"
-                            : "bg-black bg-opacity-10"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-4 gap-1 mt-0.5">
-                    {["Low", "Med", "High", "Critical"].map((l) => (
-                      <span key={l} className="text-center text-[10px] opacity-50">{l}</span>
-                    ))}
+                    {priority.detectedKeywords.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2 items-center">
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-60">
+                          Triggers:
+                        </span>
+                        {priority.detectedKeywords.map((kw) => (
+                          <span key={kw} className="px-3 py-1 bg-white/70 rounded-full text-xs font-black shadow-sm">
+                            "{kw}"
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-            {/* ═══════════════════════════════════════════════════ */}
-
           </div>
 
-          {/* Form Footer */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4">
-            <p className="text-xs text-gray-400">
-              You&apos;ll receive updates when our IT team responds to your ticket.
+          <div className="p-6 md:px-12 md:py-8 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <p className="text-sm text-gray-500 font-medium text-center sm:text-left">
+              You will receive a notification when the IT team is assigned to your ticket.
             </p>
             <button
               type="submit"
               disabled={loading || !title.trim() || !description.trim()}
-              className="flex-shrink-0 flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_8px_30px_rgb(37,99,235,0.2)] hover:shadow-[0_8px_30px_rgb(37,99,235,0.4)] hover:-translate-y-1"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12V0a12 12 0 0112 12h-4a8 8 0 00-8-8z" />
                   </svg>
-                  Submitting...
+                  Submitting Request...
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
-                  Submit Ticket
+                  Submit Securely
                 </>
               )}
             </button>
