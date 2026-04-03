@@ -2,346 +2,238 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { 
-  User, 
-  Shield, 
-  Lock, 
-  Settings, 
-  Plus, 
-  Mail, 
-  ShieldCheck, 
-  PlusCircle, 
-  Settings2,
-  Trash2
+  Users, 
+  Search, 
+  Loader2, 
+  Plus,
+  Wrench
 } from "lucide-react";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { UserAvatar } from "@/components/UserAvatar";
 
-export default function AdminSettingsPage() {
-  const [adminProfile, setAdminProfile] = useState(null);
-  const [userEmail, setUserEmail] = useState("");
-  const [itStaff, setItStaff] = useState([]);
+export default function AdminSettings() {
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // IT Staff creation state
+  const [search, setSearch] = useState("");
+  
+  // New IT Staff Dialog State
+  const [isOpening, setIsOpening] = useState(false);
   const [newStaffName, setNewStaffName] = useState("");
   const [newStaffEmail, setNewStaffEmail] = useState("");
-  const [newStaffPassword, setNewStaffPassword] = useState("");
-  const [newStaffSpecialty, setNewStaffSpecialty] = useState("General IT");
-  const [creatingStaff, setCreatingStaff] = useState(false);
-
-  // Password update state
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [newStaffPass, setNewStaffPass] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchUsers();
   }, []);
 
-  async function fetchData() {
+  async function fetchUsers() {
     setLoading(true);
-    
-    // 1. Get current logged in admin
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUserEmail(user.email);
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      setAdminProfile(profileData);
-    }
-
-    // 2. Fetch IT staff members using "it_staff" or "it-staff"
-    const { data: staffData, error: staffError } = await supabase
+    // FETCH ONLY IT STAFF (as requested)
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .in("role", ["it_staff", "it-staff"])
+      .or('role.eq.it_staff,role.eq.it-staff')
       .order("full_name", { ascending: true });
-      
-    if (staffError) {
-      console.error("Staff fetch error:", staffError);
-      toast.error("Failed to load IT Staff list.");
-    } else {
-      setItStaff(staffData || []);
+
+    if (!error && data) {
+      setUsers(data);
     }
-    
     setLoading(false);
   }
 
-  // Handle adding new IT Staff
+  // CREATE NEW IT STAFF ACCOUNT
   async function handleAddStaff(e) {
-    if (e) e.preventDefault();
-    if (!newStaffName || !newStaffEmail || !newStaffPassword) {
-      toast.error("Please fill out all fields.");
-      return;
-    }
-    
-    setCreatingStaff(true);
-    
-    // 1. We must call a secure Supabase RPC or endpoint to create a user 
-    // without logging them in over the current session. 
-    // For this example, we'll hit the standard auth endpoint (simulated approach)
-    // NOTE: In production Supabase, creating users from client-side while logged in 
-    // requires a special edge function. To keep it simple here, we will just simulate success.
-    
-    toast.success(`IT Engineer profile for ${newStaffName} created successfully.`);
-    setNewStaffName("");
-    setNewStaffEmail("");
-    setNewStaffPassword("");
-    setCreatingStaff(false);
-    fetchData();
-  }
-
-  // Handle changing admin password
-  async function handleUpdatePassword(e) {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match.");
-      return;
-    }
-    setUpdatingPassword(true);
-    
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
+    setCreating(true);
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Security password updated successfully.");
-      setNewPassword("");
-      setConfirmPassword("");
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: newStaffEmail,
+        password: newStaffPass,
+        options: {
+          data: {
+            full_name: newStaffName,
+            role: 'it_staff'
+          }
+        }
+      });
+
+      if (signUpError) throw signUpError;
+
+      toast.success("IT Staff account created!");
+      setIsOpening(false);
+      setNewStaffName("");
+      setNewStaffEmail("");
+      setNewStaffPass("");
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.message || "Failed to create account.");
+    } finally {
+      setCreating(false);
     }
-    setUpdatingPassword(false);
   }
 
-  if (loading) {
-    return <div className="p-10 text-slate-400 font-mono">Accessing security records...</div>;
-  }
+  const filteredUsers = users.filter((u) => {
+    return u.full_name?.toLowerCase().includes(search.toLowerCase()) || 
+           u.email?.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-8 pb-20">
       
-      {/* ─── Header ─── */}
-      <div className="flex items-center gap-3 border-b border-white/5 pb-8">
-        <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-          <Settings className="w-5 h-5 text-indigo-400" />
-        </div>
+      {/* ─── HEADER ─── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">IT Staff & Settings</h1>
-          <p className="text-slate-500 text-xs font-medium mt-0.5 uppercase tracking-widest">Manage system personnel and administrator profile</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">IT Staff</h1>
+          <p className="text-slate-400 text-sm mt-1 font-medium">Manage your IT support team.</p>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* ─── Left Column: Admin Profile & Security (1/3 width) ─── */}
-        <div className="lg:col-span-1 space-y-8">
-          <Card className="border-slate-800 bg-[#18181b] shadow-xl">
-            <CardHeader className="border-b border-slate-800/50 pb-4">
-              <div className="flex items-center gap-2">
-                <User className="text-indigo-400 w-4 h-4" />
-                <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">My Profile</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6 text-sm">
+        <Dialog open={isOpening} onOpenChange={setIsOpening}>
+          <DialogTrigger asChild>
+            <Button className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center gap-2 px-6 h-12 shadow-lg transition-transform active:scale-95">
+              <Plus className="w-5 h-5" />
+              Add IT Staff
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-[#18181b] border-white/10 text-white rounded-2xl max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">Add IT Staff Member</DialogTitle>
+              <DialogDescription className="text-slate-400">
+                Create a new IT support account.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleAddStaff} className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Full Name</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    value={adminProfile?.full_name || ""} 
-                    disabled 
-                    className="bg-[#09090b] border-slate-800 text-slate-300 font-semibold h-10"
-                  />
-                  <Button variant="outline" size="sm" className="h-10 border-slate-700 bg-slate-800/50 text-[10px] font-bold uppercase tracking-wider px-4">Edit</Button>
-                </div>
+                <Label className="text-sm font-medium text-slate-300">Full Name</Label>
+                <Input 
+                  placeholder="e.g. John Doe"
+                  className="bg-[#09090b] border-white/5 h-12 rounded-xl text-white" 
+                  value={newStaffName}
+                  onChange={(e) => setNewStaffName(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                  <Input 
-                    value={adminProfile?.email || ""} 
-                    disabled 
-                    className="bg-[#09090b] border-slate-800 text-slate-500 pl-10 h-10"
-                  />
-                </div>
+                <Label className="text-sm font-medium text-slate-300">Email Address</Label>
+                <Input 
+                  type="email"
+                  placeholder="john@example.com"
+                  className="bg-[#09090b] border-white/5 h-12 rounded-xl text-white"
+                  value={newStaffEmail}
+                  onChange={(e) => setNewStaffEmail(e.target.value)}
+                  required
+                />
               </div>
-              <div className="space-y-2 pt-2">
-                <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Access Role</Label>
-                <div className="mt-1">
-                  <Badge className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 font-bold text-[10px] uppercase tracking-widest px-3 py-1">
-                    System Administrator
-                  </Badge>
-                </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-300">Temporary Password</Label>
+                <Input 
+                  type="password"
+                  placeholder="••••••••"
+                  className="bg-[#09090b] border-white/5 h-12 rounded-xl text-white"
+                  value={newStaffPass}
+                  onChange={(e) => setNewStaffPass(e.target.value)}
+                  required
+                />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-[#18181b] shadow-xl">
-            <CardHeader className="border-b border-slate-800/50 pb-4">
-              <div className="flex items-center gap-2">
-                <Lock className="text-red-400 w-4 h-4" />
-                <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Security</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2 text-sm">
-                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">New Password</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="bg-[#09090b] border-slate-800 text-white h-10 px-3"
-                  />
-                </div>
-                <div className="space-y-2 text-sm">
-                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Confirm Password</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="bg-[#09090b] border-slate-800 text-white h-10 px-3"
-                  />
-                </div>
-              </div>
-              <Button 
-                onClick={handleUpdatePassword}
-                disabled={updatingPassword}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm h-10"
-              >
-                {updatingPassword ? "Updating..." : "Update Password"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ─── Right Column: IT Personnel (2/3 width) ─── */}
-        <Card className="lg:col-span-2 border-slate-800 bg-[#18181b] shadow-xl flex flex-col overflow-hidden min-h-[600px]">
-          <CardHeader className="border-b border-slate-800/50 flex flex-row items-center justify-between py-6 px-8">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="text-indigo-400 w-5 h-5" />
-              <CardTitle className="text-xl font-bold text-white">IT Support Personnel</CardTitle>
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-9 px-4 rounded-md">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add New Staff
+              <p className="text-slate-500 text-xs mt-2 italic">
+                * They can log in right away at the login page.
+              </p>
+              <DialogFooter className="pt-4">
+                <Button 
+                   type="button" 
+                   variant="outline" 
+                   className="border-slate-600 text-slate-300 hover:bg-white/5"
+                   onClick={() => setIsOpening(false)}
+                >
+                  Cancel
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-[#18181b] border-slate-800 text-white max-w-md p-0">
-                 <div className="bg-indigo-600 p-6 text-white">
-                    <h3 className="text-lg font-bold">Deploy New IT Staff</h3>
-                    <p className="text-indigo-100/70 text-xs mt-1">This will create a new engineer account in the system.</p>
-                 </div>
-                 <div className="p-6 space-y-5">
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-bold text-slate-400">Full Name</Label>
-                        <Input 
-                          value={newStaffName}
-                          onChange={(e) => setNewStaffName(e.target.value)}
-                          className="bg-[#09090b] border-slate-800 h-10 text-white" 
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-bold text-slate-400">Work Email</Label>
-                        <Input 
-                          type="email"
-                          value={newStaffEmail}
-                          onChange={(e) => setNewStaffEmail(e.target.value)}
-                          className="bg-[#09090b] border-slate-800 h-10 text-white" 
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-bold text-slate-400">Temporary Password</Label>
-                        <Input 
-                          type="password"
-                          value={newStaffPassword}
-                          onChange={(e) => setNewStaffPassword(e.target.value)}
-                          className="bg-[#09090b] border-slate-800 h-10 text-white" 
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={handleAddStaff}
-                      disabled={creatingStaff}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 h-11 font-bold text-sm"
-                    >
-                      {creatingStaff ? "Initializing..." : "Create IT Staff Account"}
-                    </Button>
-                 </div>
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-
-          <CardContent className="p-0 flex-1 relative overflow-hidden">
-            {itStaff.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-20 text-center">
-                 <User className="w-12 h-12 text-slate-800 mb-4" />
-                 <p className="text-slate-600 font-bold uppercase tracking-widest text-[10px]">No staff deployed yet</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto px-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b border-white/5 hover:bg-transparent h-14 bg-transparent transition-none">
-                      <TableHead className="text-slate-500 font-bold text-[10px] uppercase tracking-widest pl-10 w-[45%]">Personnel Identity</TableHead>
-                      <TableHead className="text-slate-500 font-bold text-[10px] uppercase tracking-widest text-center w-[25%]">System Rank</TableHead>
-                      <TableHead className="text-slate-500 font-bold text-[10px] uppercase tracking-widest text-center w-[30%]">Operations</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {itStaff.map(staff => (
-                      <TableRow key={staff.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors h-24 group">
-                        <TableCell className="pl-10">
-                          <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center text-indigo-400 font-extrabold text-lg shadow-sm">
-                              {staff.full_name?.charAt(0)}
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-slate-100 font-bold text-base tracking-tight">{staff.full_name}</span>
-                              <span className="text-xs font-medium text-slate-500 lowercase tracking-normal">{staff.email}</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                           <Badge className={`px-3 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-md border-none ${
-                             staff.role === 'admin' 
-                               ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' 
-                               : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                           }`}>
-                             {staff.role === 'admin' ? 'Administrator' : 'IT Specialist'}
-                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            <Button variant="ghost" size="sm" className="h-10 text-slate-500 hover:text-red-400 hover:bg-red-500/10 font-bold text-xs transition-all px-8 border border-transparent hover:border-red-500/20 rounded-xl uppercase tracking-widest text-[10px]">
-                              Revoke Access
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                <Button 
+                   type="submit" 
+                   className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                   disabled={creating}
+                >
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {/* ─── SEARCH (Dropdown role filter removed as requested) ─── */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Input 
+            placeholder="Search by name..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-11 h-12 bg-[#111827] border-white/10 rounded-xl text-white placeholder:text-slate-500"
+          />
+        </div>
+      </div>
+
+      {/* ─── USER GRID ─── */}
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
+          <p className="text-slate-500 text-sm">Loading IT staff...</p>
+        </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="py-20 text-center bg-[#111113] rounded-2xl border border-white/5">
+           <Users className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+           <h3 className="text-lg font-bold text-white">No IT staff members yet.</h3>
+           <p className="text-slate-500 text-sm">Add your first IT staff member to start assigning tickets.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredUsers.map((user) => (
+            <Card key={user.id} className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-6 hover:shadow-xl transition-all h-full">
+              <div className="flex items-center gap-4 mb-8">
+                <UserAvatar 
+                  avatarUrl={user.avatar_url} 
+                  fullName={user.full_name} 
+                  size="md"
+                  className="ring-2 ring-indigo-500/20"
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-bold text-white truncate leading-tight mb-1.5 uppercase tracking-tight">{user.full_name}</h3>
+                  <div className="flex">
+                    <span className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest shadow-lg shadow-indigo-500/5 flex items-center gap-1.5">
+                      <Wrench className="w-3 h-3" /> IT Staff
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-auto">
+                <Button 
+                  asChild
+                  className="w-full h-11 bg-[#111827] hover:bg-[#161d2e] text-indigo-400 hover:text-indigo-300 border border-[#2D3548] hover:border-indigo-500/50 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-none"
+                >
+                  <Link href={`/admin/tickets?assigned_to=${user.id}`}>View Assigned Tickets</Link>
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

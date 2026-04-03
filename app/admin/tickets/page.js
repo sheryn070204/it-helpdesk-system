@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Search, Loader2, Ticket } from "lucide-react";
+import { Search, Loader2, Ticket, Filter, Database, ArrowUpRight, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -11,38 +12,59 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { getPriorityBadge, getStatusBadge } from "@/lib/badgeHelpers";
 import { Card, CardContent } from "@/components/ui/card";
+import { UserAvatar } from "@/components/UserAvatar";
 
 export default function AdminTicketsPage() {
+  const searchParams = useSearchParams();
+  const assignedToId = searchParams.get("assigned_to");
+  
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [assigneeName, setAssigneeName] = useState("");
   
-  // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
   useEffect(() => {
-    async function fetchTickets() {
-      const { data } = await supabase
-        .from("tickets")
-        .select(`
-          id, title, priority, status, created_at,
-          submitter:profiles!tickets_submitted_by_fkey (full_name),
-          assignee:profiles!tickets_assigned_to_fkey (full_name)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (data) setTickets(data);
-      setLoading(false);
-    }
-    
     fetchTickets();
-  }, []);
+  }, [assignedToId]);
+
+  async function fetchTickets() {
+    setLoading(true);
+    let query = supabase
+      .from("tickets")
+      .select(`
+        id, title, priority, status, created_at,
+        submitter:profiles!tickets_submitted_by_fkey (full_name, avatar_url),
+        assignee:profiles!tickets_assigned_to_fkey (id, full_name, avatar_url)
+      `);
+
+    // Force filter if assigned_to param is present
+    if (assignedToId) {
+      query = query.eq("assigned_to", assignedToId);
+    }
+
+    const { data } = await query.order("created_at", { ascending: false });
+
+    if (data) {
+      setTickets(data);
+      // If filtering by user, set the display name from the first ticket's assignee
+      if (assignedToId && data.length > 0) {
+        setAssigneeName(data[0].assignee?.full_name || "Selected Staff");
+      }
+    }
+    setLoading(false);
+  }
 
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("all");
     setPriorityFilter("all");
+    if (assignedToId) {
+      // Logic to clear the URL param would typically involve router.push('/admin/tickets')
+      window.location.href = "/admin/tickets";
+    }
   };
 
   const filteredTickets = tickets.filter(t => {
@@ -52,136 +74,172 @@ export default function AdminTicketsPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const totalCount = tickets.length;
-
   return (
-    <div className="max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       
-      {/* ─── Header ─── */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Master Ticket Log</h1>
-          {!loading && (
-            <p className="text-sm text-slate-400 font-medium mt-1">Viewing all {totalCount} system tickets</p>
-          )}
+      {/* ─── HEADER ─── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Database className="w-4 h-4 text-indigo-500" />
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Master Records</span>
+          </div>
+          <h1 className="text-3xl font-black text-white tracking-tight">
+            {assignedToId ? (
+              <>Assigned to <span className="text-indigo-500">{assigneeName}</span></>
+            ) : (
+              <>All <span className="text-indigo-500">Tickets</span></>
+            )}
+          </h1>
+          <p className="text-sm text-slate-500 font-medium">
+            {assignedToId 
+              ? `Showing tickets currently assigned to this staff member.` 
+              : `Monitoring ${tickets.length} total tickets across the platform.`}
+          </p>
         </div>
+        
+        {assignedToId && (
+          <Button 
+            variant="ghost" 
+            onClick={() => window.location.href = "/admin/tickets"}
+            className="h-12 px-6 rounded-xl border border-white/5 text-slate-400 hover:text-white hover:bg-white/5 text-[10px] font-black uppercase tracking-widest"
+          >
+            <X className="w-4 h-4 mr-2" /> Clear Staff Filter
+          </Button>
+        )}
       </div>
 
-      {/* ─── Filters ─── */}
-      <Card className="shadow-sm border-slate-800 bg-[#18181b]">
-        <CardContent className="p-4 flex flex-col lg:flex-row gap-4 items-center">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+      {/* ─── FILTERS AREA ─── */}
+      <Card className="bg-[#111113] border-white/5 shadow-2xl rounded-3xl overflow-hidden">
+        <CardContent className="p-6 flex flex-col xl:flex-row gap-4 items-stretch lg:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
             <Input 
-              placeholder="Search by ticket title..." 
+              placeholder="Search by title..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-[#09090b] text-white border-slate-800 focus-visible:ring-indigo-500 placeholder-slate-500"
+              className="pl-12 h-14 bg-[#09090b] text-white border-white/5 rounded-2xl focus-visible:ring-indigo-500 placeholder:text-slate-700 font-medium text-base shadow-inner"
             />
           </div>
           
-          <div className="flex flex-row gap-4 w-full lg:w-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full lg:w-[160px] bg-[#09090b] text-white border-slate-800 focus:ring-indigo-500 font-medium">
+              <SelectTrigger className="h-14 lg:w-[160px] bg-[#09090b] text-white border-white/5 rounded-2xl focus:ring-indigo-500 font-bold text-xs uppercase tracking-widest shadow-inner">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-[#18181b] border-slate-700 text-white">
-                <SelectItem className="hover:bg-slate-800" value="all">All Statuses</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="open">Open</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="in_progress">In Progress</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="resolved">Resolved</SelectItem>
+              <SelectContent className="bg-[#18181b] border-white/10 text-white rounded-xl">
+                <SelectItem value="all">All States</SelectItem>
+                <SelectItem value="open">Open</SelectItem>
+                <SelectItem value="in_progress">Working</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
               </SelectContent>
             </Select>
             
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-full lg:w-[160px] bg-[#09090b] text-white border-slate-800 focus:ring-indigo-500 font-medium">
+              <SelectTrigger className="h-14 lg:w-[160px] bg-[#09090b] text-white border-white/5 rounded-2xl focus:ring-indigo-500 font-bold text-xs uppercase tracking-widest shadow-inner">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
-              <SelectContent className="bg-[#18181b] border-slate-700 text-white">
-                <SelectItem className="hover:bg-slate-800" value="all">All Priorities</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="critical">Critical</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="high">High</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="medium">Medium</SelectItem>
-                <SelectItem className="hover:bg-slate-800" value="low">Low</SelectItem>
+              <SelectContent className="bg-[#18181b] border-white/10 text-white rounded-xl">
+                <SelectItem value="all">All Ranks</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
 
             <Button 
               variant="outline" 
               onClick={clearFilters}
-              className="px-4 border-slate-700 bg-transparent text-slate-400 hover:text-white hover:bg-slate-800 border-dashed"
+              className="h-14 border-dashed border-white/10 bg-transparent text-slate-500 hover:text-white hover:bg-white/5 px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest"
             >
-              Clear Filters
+              Reset
+            </Button>
+            
+            <Button 
+              onClick={fetchTickets}
+              className="h-14 bg-indigo-600 hover:bg-indigo-500 text-white px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+            >
+              Refresh
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* ─── Table ─── */}
-      <Card className="shadow-sm border-slate-800 overflow-hidden bg-[#18181b]">
+      {/* ─── TABLE CONTENT ─── */}
+      <Card className="bg-[#111113] border-white/5 shadow-2xl rounded-[32px] overflow-hidden">
         {loading ? (
-          <div className="p-20 flex flex-col items-center justify-center text-slate-500">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
-            <p className="font-medium text-sm">Querying master database...</p>
+          <div className="py-40 flex flex-col items-center justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-6" />
+            <p className="font-black text-[11px] text-slate-500 uppercase tracking-[0.4em]">Loading tickets...</p>
           </div>
         ) : filteredTickets.length === 0 ? (
-          <div className="p-20 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-[#09090b] rounded-full flex items-center justify-center mb-4 border border-slate-800">
-              <Ticket className="w-8 h-8 text-slate-600" />
+          <div className="py-40 flex flex-col items-center justify-center text-center px-10">
+            <div className="w-20 h-20 bg-[#09090b] rounded-3xl flex items-center justify-center mb-8 border border-white/5 shadow-inner">
+              <Ticket className="w-8 h-8 text-slate-700" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No tickets found</h3>
-            <p className="text-slate-500 max-w-sm mx-auto text-sm">
+            <h3 className="text-2xl font-black text-white mb-2 tracking-tight">No Tickets Found</h3>
+            <p className="text-slate-500 max-w-sm mx-auto text-sm font-medium leading-relaxed">
               {tickets.length === 0 
-                ? "The system has not logged any tickets." 
-                : "No tickets match your specific filter criteria."}
-            </p>
+                ? "This staff member currently has no tickets assigned to them." 
+                : "No tickets match your search criteria."}
+          </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent h-14 bg-transparent transition-none">
-                  <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest pl-8 w-[80px]">ID Ref</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest w-[300px]">Incident Subject</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest text-center">Priority</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest text-center">Triage</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest text-center">Staff Assignment</TableHead>
-                  <TableHead className="text-right font-bold text-slate-500 text-[10px] uppercase tracking-widest pr-8">Operations</TableHead>
+                <TableRow className="border-b border-white/5 bg-white/[0.02] h-16 hover:bg-transparent">
+                  <TableHead className="font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] pl-10 text-left">Ticket Information</TableHead>
+                  <TableHead className="font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] text-center w-[150px]">Priority</TableHead>
+                  <TableHead className="font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] text-center w-[150px]">Status</TableHead>
+                  <TableHead className="font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] text-center w-[200px]">Assigned To</TableHead>
+                  <TableHead className="text-right font-black text-slate-600 text-[10px] uppercase tracking-[0.2em] pr-10">Action</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="divide-y divide-white/5">
                 {filteredTickets.map((ticket) => (
-                  <TableRow key={ticket.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors h-20 group">
-                    <TableCell className="pl-8 font-mono text-[10px] text-slate-500">
-                      {ticket.id.slice(0, 8)}
-                    </TableCell>
-                    <TableCell className="py-4">
-                       <div className="flex flex-col gap-0.5">
-                          <span className="font-bold text-slate-100 text-sm max-w-[280px] truncate">{ticket.title}</span>
-                          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">By: {ticket.submitter?.full_name || "Guest"}</span>
+                  <TableRow key={ticket.id} className="group hover:bg-white/[0.03] transition-colors h-24 border-none">
+                    <TableCell className="pl-10">
+                       <div className="flex items-center gap-5">
+                          <UserAvatar 
+                            avatarUrl={ticket.submitter?.avatar_url} 
+                            fullName={ticket.submitter?.full_name} 
+                            size="default"
+                            className="w-12 h-12 rounded-2xl ring-2 ring-white/5"
+                          />
+                          <div className="flex flex-col gap-1">
+                             <span className="font-black text-white text-base max-w-[320px] truncate leading-tight tracking-tight">{ticket.title}</span>
+                             <div className="flex items-center gap-2">
+                               <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest whitespace-nowrap">ID: {ticket.id.slice(0, 8)}</span>
+                               <span className="w-1 h-1 rounded-full bg-slate-700" />
+                               <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{ticket.submitter?.full_name || "Guest"}</span>
+                             </div>
+                          </div>
                        </div>
                     </TableCell>
-                    <TableCell className="text-center px-4">
-                      {getPriorityBadge(ticket.priority)}
+                    <TableCell className="px-4">
+                      <div className="flex justify-center">{getPriorityBadge(ticket.priority)}</div>
                     </TableCell>
-                    <TableCell className="text-center px-4">
-                      {getStatusBadge(ticket.status)}
+                    <TableCell className="px-4">
+                      <div className="flex justify-center">{getStatusBadge(ticket.status)}</div>
                     </TableCell>
-                    <TableCell className="text-center px-4">
-                      {ticket.assignee ? (
-                        <div className="flex justify-center">
-                          <Badge className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded">
-                            {ticket.assignee.full_name}
+                    <TableCell className="px-4">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        {ticket.assignee ? (
+                          <Badge className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl">
+                            {ticket.assignee.full_name.split(' ')[0]}
                           </Badge>
-                        </div>
-                      ) : (
-                        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em] animate-pulse">Unassigned</span>
-                      )}
+                        ) : (
+                          <span className="text-[9px] font-black text-slate-700 uppercase tracking-[0.3em]">Unassigned</span>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell className="text-right pr-8">
+                    <TableCell className="text-right pr-10">
                       <Link href={`/admin/tickets/${ticket.id}`}>
-                        <Button variant="ghost" size="sm" className="font-bold text-[10px] uppercase tracking-widest text-indigo-400 hover:text-white hover:bg-indigo-600/20 border border-transparent hover:border-indigo-500/30 transition-all rounded-xl px-6 h-9 bg-indigo-500/5">
-                          Analyze
+                        <Button className="font-black text-[10px] uppercase tracking-[0.2em] text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all rounded-2xl px-8 h-12 active:scale-95 group/btn">
+                          View
+                          <ArrowUpRight className="ml-2 w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                         </Button>
                       </Link>
                     </TableCell>

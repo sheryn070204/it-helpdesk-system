@@ -1,48 +1,40 @@
-# ⚙️ How the System Works: Operational Guide
+# IT Helpdesk Ticketing System — Operational Workflow
 
-This guide explains the "Journey of a Ticket" and how different users interact with the system.
+## 1. Authentication & Identity
+- **Entry Hub:** Users enter via a premium **Command Login** (`/login`) or **Identity Request** (`/register`).
+- **Visual Identity:** Sophisticated dark-themed authentication with glassmorphism and indigo accents.
+- **Role-Based Routing:** System automatically detects roles (Admin, IT Staff, Employee) and routes to regional hubs.
 
----
+## 2. Employee Portal (User-Centric & Light)
+- **Aesthetic:** Professional "Light Indigo" theme for clarity and user-friendliness.
+- **Dashboard:** At-a-glance KPI cards tracking active and resolved incidents.
+- **Incident Initiation:** 
+  - Automated **Priority Rules** detection based on keywords (Urgent, Emergency, Broken, Stop = Critical).
+  - Live character counts and priority previews.
+- **Registry:** Complete searchable log of historical support threads with engineer `UserAvatar` integration.
+- **Detail Node:** Holistic view of ticket progress with an incident lifecycle timeline.
 
-## 🚀 1. The Ticket Lifecycle
-Every problem reported follows this standard path:
+## 3. IT Staff Portal (Shadow Gray)
+- **Aesthetic:** "Shadow Gray" and "Light Slate" for high-density focus and engineering ergonomics.
+- **Workflow:** 
+  - Engineers monitor the **Incident Registry** for new assignments.
+  - **Triage Console:** Advanced controls to update status, priority, and internal notes.
+  - **Transaction Timeline:** Visual record of all engineering actions and status shifts.
 
-### Step A: Submission (The Employee)
-1.  An **Employee** logs in and goes to the "Submit Ticket" page.
-2.  They fill in the **Title**, **Description**, and **Priority** (Critical, High, Medium, Low).
-3.  Once they hit "Submit," the ticket is created in the database and is marked as `open`.
+## 4. Administrative Portal (Dark Gray)
+- **Aesthetic:** Professional "Dark Gray" for high-level oversight and command control.
+- **System Stewardship:**
+  - **Master Dashboard:** Real-time analytics of global support health.
+  - **Ticket Logs:** Full transparency into every incident across the organization.
+  - **Personnel Management:** Role adjustment and account lifecycle management in the **Admin Settings**.
+  - **Global Profile:** Update administrative identity and profile imagery via the secure storage uplink.
 
-### Step B: Triage & Assignment (The Admin)
-1.  The **Admin** sees the new ticket in their **Recent Activity** or **All Tickets** list.
-2.  The Admin reviews the problem and chooses an **IT Staff member** to handle it.
-3.  When the Admin hits "Save," two things happen:
-    -   The ticket is "Assigned" to that person.
-    -   A **Ping (Notification)** is sent to the IT Staff member's bell icon.
-
-### Step C: Resolution (The IT Staff)
-1.  The **IT Staff** logs in and sees the ticket in their assigned list.
-2.  They start working on the fix and update the status to **"In Progress"**.
-3.  Once fixed, they set the status to **"Resolved"**.
-4.  **Automatic Ping:** The system sends a notification back to the original **Employee** to let them know their problem is solved!
-
----
-
-## 🔔 2. The Notification Engine
-Our system uses a "Real-time" listener.
--   **No Refreshing Needed:** If you are on the dashboard and someone assigns you a ticket, the red dot on the bell will appear instantly.
--   **Audit Trail:** Every major change (assignment or status update) is recorded so the Admin can see the history of the ticket.
-
----
-
-## 🔐 3. Access Control (Who sees what?)
-The system checks your "Identity" (Role) every time you log in:
-
--   **Admins:** Have "God Mode." They can see all tickets, delete/add staff, and change any setting.
--   **IT Staff:** Can only see tickets assigned to them. They cannot change system settings.
--   **Employees:** Can only see their own tickets. They cannot see IT Staff names or other users' problems.
+## 5. Technical Architecture
+- **Framework:** Next.js with App Router.
+- **Database:** Supabase (PostgreSQL) with Real-time synchronization.
+- **Auth:** Supabase SSR with Middleware-based routing for security.
+- **UI Components:** Standardized `shadcn/ui` with custom premium styling.
+- **Notification Engine:** Persistent `NotificationBell` with real-time state sync across all portals.
 
 ---
-
-## 🛠️ 4. Common Troubleshooting
--   **If a button doesn't work:** Check if you are correctly logged in. The system might have logged you out for security.
--   **If you don't see a ticket:** Ensure you are in the correct "Floor" (e.g., if you are an Admin, check "All Tickets" instead of just your dashboard).
+*Operational status: Stable — v2.0.4-Modern*

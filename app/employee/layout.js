@@ -1,16 +1,19 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
+import { UserAvatar } from "@/components/UserAvatar";
 import NotificationBell from "@/components/NotificationBell";
 import EmployeeNav from "@/components/EmployeeNav";
-import { LogOut, LifeBuoy } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { 
+  LifeBuoy, 
+  LogOut
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function EmployeeLayout({ children }) {
   const supabase = await createClient();
 
-  // Verify the user's session
+  // 1. Auth Guard
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -19,17 +22,14 @@ export default async function EmployeeLayout({ children }) {
     redirect("/login");
   }
 
-  // Fetch profile to check role
+  // 2. Fetch Profile for Layout
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("*")
     .eq("id", user.id)
     .single();
 
-  // Guard routing
-  if (!profile || profile.role !== "employee") {
-    if (profile?.role === "admin") redirect("/admin");
-    if (profile?.role === "it_staff" || profile?.role === "it-staff") redirect("/it-staff");
+  if (!profile) {
     redirect("/login");
   }
 
@@ -40,71 +40,74 @@ export default async function EmployeeLayout({ children }) {
     redirect("/login");
   }
 
-  // Calculate initials like "JD" from "John Doe"
-  const initials = profile.full_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase() || "ME";
-
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
-      {/* Top Navigation Bar */}
-      <nav className="h-16 bg-white border-b border-slate-200 sticky top-0 z-20 flex-shrink-0">
-        <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          
-          {/* Brand/Logo Area */}
-          <Link href="/employee" className="flex items-center gap-3 transition-opacity hover:opacity-80">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
-              <LifeBuoy className="w-5 h-5 text-white" />
+    <div className="min-h-screen flex bg-slate-50 text-slate-900">
+      {/* ─── SIDEBAR (Matched Admin structure, kept Employee colors) ─── */}
+      <aside className="w-56 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col min-h-screen sticky top-0">
+        {/* Brand Header */}
+        <div className="h-16 px-6 flex items-center border-b border-slate-100">
+          <Link href="/employee" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-all">
+              <LifeBuoy className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-slate-900 text-xl tracking-tight">IT Helpdesk</span>
+            <div>
+              <p className="text-slate-900 font-bold text-sm tracking-tight leading-none mb-0.5">HelpDesk</p>
+              <p className="text-indigo-600 text-[9px] uppercase font-bold tracking-widest leading-none">Employee</p>
+            </div>
           </Link>
+        </div>
 
-          {/* Right Side Tools */}
-          <div className="flex items-center gap-4 lg:gap-6">
-            <NotificationBell role="employee" theme="light" />
-            
-            <div className="h-8 w-px bg-slate-200 hidden sm:block"></div>
-            
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-semibold text-slate-900 leading-none">{profile.full_name}</p>
-                <p className="text-xs text-slate-500 mt-1">Staff Member</p>
-              </div>
-              <Avatar className="h-10 w-10 border-2 border-blue-100 shadow-sm">
-                <AvatarFallback className="bg-blue-50 text-blue-700 font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              
-              <form action={handleSignOut}>
-                <Button 
-                  type="submit" 
-                  variant="ghost" 
-                  size="icon"
-                  title="Sign Out"
-                  className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full w-10 h-10"
-                >
-                  <LogOut className="w-5 h-5" />
-                </Button>
-              </form>
+        {/* Navigation */}
+        <div className="flex-1 py-4">
+          <EmployeeNav />
+        </div>
+
+        {/* User Info + Log Out (Matched Admin structure, kept Employee colors) */}
+        <div className="p-3 border-t border-slate-100">
+          <div className="flex items-center gap-3 px-2 mb-2">
+            <UserAvatar 
+              avatarUrl={profile.avatar_url} 
+              fullName={profile.full_name} 
+              size="sm"
+              className="border border-slate-200"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900 truncate leading-none mb-1">{profile.full_name}</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Verified User</p>
             </div>
           </div>
+          <form action={handleSignOut}>
+            <Button
+              type="submit"
+              variant="ghost"
+              className="w-full flex items-center justify-start gap-2 h-9 px-2 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors group"
+            >
+              <LogOut className="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors" />
+              <span className="text-xs font-medium">Log out</span>
+            </Button>
+          </form>
         </div>
-      </nav>
+      </aside>
 
-      {/* Main Layout Block */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <aside className="w-64 bg-white border-r border-slate-200 hidden md:block flex-shrink-0">
-          <EmployeeNav />
-        </aside>
+      {/* ─── MAIN CONTENT AREA ─── */}
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
+        {/* Top Header */}
+        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
+           <div className="flex items-center gap-3">
+             <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+               Employee Support Interface
+             </div>
+           </div>
+          
+          <div className="flex items-center gap-6">
+            <NotificationBell role="employee" theme="light" />
+          </div>
+        </header>
 
-        {/* Page Content area */}
-        <main className="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto w-full">
+        {/* Viewport */}
+        <main className="flex-1 p-8 overflow-y-auto">
+          <div className="max-w-[1200px] mx-auto">
             {children}
           </div>
         </main>

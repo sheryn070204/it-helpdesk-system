@@ -11,7 +11,7 @@ import {
   Mail, 
   Lock,
   ChevronLeft,
-  Wrench
+  Settings
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import Link from "next/link"
 
-export default function ITStaffProfilePage() {
+export default function AdminProfilePage() {
   const [profile, setProfile] = useState(null)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -116,7 +116,7 @@ export default function ITStaffProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center py-40">
         <Loader2 className="animate-spin h-10 w-10 text-indigo-500 mb-4" />
-        <p className="text-slate-500 text-sm">Loading engineer profile...</p>
+        <p className="text-slate-500 text-sm">Loading profile details...</p>
       </div>
     )
   }
@@ -124,7 +124,7 @@ export default function ITStaffProfilePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
       
-      <Link href="/it-staff" className="text-slate-400 hover:text-white text-sm mb-8 flex items-center gap-2 group transition-colors">
+      <Link href="/admin" className="text-slate-400 hover:text-white text-sm mb-8 flex items-center gap-2 group transition-colors">
         <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Dashboard
       </Link>
@@ -133,7 +133,7 @@ export default function ITStaffProfilePage() {
         
         {/* ─── LEFT COLUMN: PROFILE CARD ─── */}
         <div className="lg:col-span-1">
-          <Card className="bg-[#222836] border-[#2E3545] rounded-2xl p-8 text-center flex flex-col items-center shadow-2xl">
+          <Card className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-8 text-center flex flex-col items-center shadow-2xl">
             
             <div className="relative inline-block mb-5">
               <div className="relative">
@@ -152,7 +152,7 @@ export default function ITStaffProfilePage() {
               </div>
               
               <label htmlFor="avatar-upload" className="cursor-pointer">
-                <div className="absolute bottom-1 right-1 w-9 h-9 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center border-2 border-[#222836] transition-colors cursor-pointer shadow-lg shadow-indigo-600/30">
+                <div className="absolute bottom-1 right-1 w-9 h-9 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center border-2 border-[#1E2538] transition-colors cursor-pointer shadow-lg shadow-indigo-600/30">
                   <Camera className="w-4 h-4 text-white" />
                 </div>
                 <input 
@@ -167,16 +167,16 @@ export default function ITStaffProfilePage() {
             </div>
             
             <h2 className="text-2xl font-bold text-white mt-4 truncate w-full">{profile?.full_name}</h2>
-            <p className="text-[#8FA3BF] text-sm mt-1 truncate w-full">{user?.email}</p>
+            <p className="text-slate-400 text-sm mt-1 truncate w-full">{user?.email}</p>
             
             <div className="mt-4">
               <span className="bg-indigo-500/10 text-indigo-300 border border-indigo-400/20 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
-                IT SUPPORT ENGINEER
+                ADMINISTRATOR
               </span>
             </div>
             
             <p className="text-slate-500 text-[10px] uppercase tracking-tighter mt-6 font-medium">
-              Registered Engineer since {new Date(profile?.created_at).toLocaleDateString()}
+              Member since {new Date(profile?.created_at).toLocaleDateString()}
             </p>
           </Card>
         </div>
@@ -184,7 +184,7 @@ export default function ITStaffProfilePage() {
         {/* ─── RIGHT COLUMN: DETAILS ─── */}
         <div className="lg:col-span-2 space-y-6">
           
-          <Card className="bg-[#222836] border-[#2E3545] rounded-2xl p-6 shadow-xl">
+          <Card className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
               <User className="w-5 h-5 text-indigo-400" />
               Edit Profile
@@ -192,10 +192,10 @@ export default function ITStaffProfilePage() {
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#8FA3BF] ml-1">Full Name</Label>
+                <Label className="text-sm font-medium text-slate-300 ml-1">Full Name</Label>
                 <Input 
                   type="text" 
-                  className="w-full bg-[#1A2030] border border-[#374151] text-[#E2E8F0] rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
+                  className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                 />
@@ -204,28 +204,28 @@ export default function ITStaffProfilePage() {
               <Button 
                 onClick={handleUpdateName}
                 disabled={updating}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 h-12 rounded-xl transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 h-12 rounded-xl transition-all active:scale-95"
               >
                 {updating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Changes"}
               </Button>
             </div>
           </Card>
           
-          <Card className="bg-[#222836] border-[#2E3545] rounded-2xl p-6 shadow-xl">
+          <Card className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-6 shadow-xl">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Lock className="w-5 h-5 text-indigo-400" />
                 Account Security
               </h3>
-              <p className="text-[#8FA3BF] text-sm mt-1 font-medium">Update your password to stay secure.</p>
+              <p className="text-slate-400 text-sm mt-1 font-medium">Update your password to stay secure.</p>
             </div>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#8FA3BF] ml-1">New Password</Label>
+                <Label className="text-sm font-medium text-slate-300 ml-1">New Password</Label>
                 <Input 
                   type="password" 
-                  className="w-full bg-[#1A2030] border border-[#374151] text-[#E2E8F0] rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
+                  className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
@@ -233,10 +233,10 @@ export default function ITStaffProfilePage() {
               </div>
               
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#8FA3BF] ml-1">Confirm Password</Label>
+                <Label className="text-sm font-medium text-slate-300 ml-1">Confirm Password</Label>
                 <Input 
                   type="password" 
-                  className="w-full bg-[#1A2030] border border-[#374151] text-[#E2E8F0] rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
+                  className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat new password"
@@ -246,7 +246,7 @@ export default function ITStaffProfilePage() {
               <Button 
                 onClick={handleUpdatePassword}
                 disabled={updating}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 h-12 rounded-xl transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 h-12 rounded-xl transition-all active:scale-95"
               >
                 {updating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
               </Button>

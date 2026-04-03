@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Bell } from "lucide-react";
+import { Bell, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,7 +19,6 @@ export default function NotificationBell({ role = "employee", theme = "light" })
   const [userId, setUserId] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // 1. Fetch current user & notifications on mount
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -31,7 +30,6 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     init();
   }, []);
 
-  // 2. Polling every 30 seconds
   useEffect(() => {
     if (!userId) return;
     const interval = setInterval(() => {
@@ -53,7 +51,6 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     }
   }
 
-  // 3. Mark all as read
   async function markAllAsRead(e) {
     if (e) e.stopPropagation();
     if (!userId) return;
@@ -68,9 +65,7 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     );
   }
 
-  // 4. Handle Notification Click
   async function handleNotificationClick(notif) {
-    // Mark specifically as read
     if (!notif.is_read) {
       await supabase
         .from("notifications")
@@ -84,7 +79,6 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     
     setIsOpen(false);
     
-    // Navigation logic based on role
     let route = "/employee/tickets"; 
     if (role === "admin") {
       route = `/admin/tickets/${notif.ticket_id}`;
@@ -94,7 +88,6 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     router.push(route);
   }
 
-  // 5. Time Ago formatter
   function timeAgo(dateString) {
     const msMinute = 60 * 1000;
     const msHour = msMinute * 60;
@@ -110,70 +103,7 @@ export default function NotificationBell({ role = "employee", theme = "light" })
   }
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
-
-  // Render Theme Maps
   const isDark = theme === "dark";
-
-  // Bell Button Styles
-  const bellButtonClasses = isDark
-    ? "text-slate-300 hover:text-white"
-    : "text-slate-600 hover:text-slate-900";
-
-  // Dropdown Menu container
-  const dropdownContentClasses = isDark
-    ? "bg-[#1E293B] border border-slate-700 shadow-xl rounded-xl w-80 p-0"
-    : "bg-white border border-slate-200 shadow-lg rounded-xl w-80 p-0";
-
-  // Header Title
-  const headerTitleClasses = isDark
-    ? "text-white font-semibold text-sm"
-    : "text-slate-900 font-semibold text-sm";
-
-  // Mark all read button
-  const markReadButtonClasses = isDark
-    ? "text-indigo-400 text-xs hover:text-indigo-300"
-    : "text-blue-600 text-xs hover:underline";
-
-  // Separator
-  const separatorClasses = isDark ? "bg-slate-700 m-0" : "bg-slate-100 m-0";
-
-  // Notification Item
-  const getItemClasses = (isRead) => {
-    if (isDark) {
-      return isRead 
-        ? "bg-transparent hover:bg-slate-800" 
-        : "bg-indigo-950/40 hover:bg-indigo-950/60";
-    } else {
-      return isRead 
-        ? "bg-white hover:bg-slate-50" 
-        : "bg-blue-50 hover:bg-blue-100";
-    }
-  };
-
-  // Dot
-  const getDotClasses = (isRead) => {
-    if (isDark) {
-      return isRead ? "bg-slate-600" : "bg-indigo-400";
-    } else {
-      return isRead ? "bg-transparent" : "bg-blue-500";
-    }
-  };
-
-  // Text inside notification
-  const getMessageClasses = (isRead) => {
-    if (isDark) {
-      return isRead ? "text-slate-400 text-sm" : "text-slate-100 text-sm font-medium";
-    } else {
-      return isRead ? "text-slate-600 text-sm" : "text-slate-800 text-sm font-medium";
-    }
-  };
-  
-  const timeClasses = isDark ? "text-slate-500" : "text-slate-400";
-
-  // Empty state text
-  const emptyIconClasses = isDark ? "text-slate-600" : "text-slate-300";
-  const emptyTextClasses = "text-slate-500 text-sm";
-  const viewAllClasses = isDark ? "text-indigo-400" : "text-blue-600";
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -181,79 +111,104 @@ export default function NotificationBell({ role = "employee", theme = "light" })
         <Button
           variant="ghost"
           size="icon"
-          className={`relative rounded-full transition-colors ${bellButtonClasses}`}
+          className={`relative w-11 h-11 rounded-xl transition-all duration-200 ${
+            isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'
+          }`}
         >
-          <Bell className="w-5 h-5" />
-          {/* Unread Badge overlay */}
+          <Bell className={`w-6 h-6 transition-colors ${
+            isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+          }`} />
           {unreadCount > 0 && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-transparent">
-              {unreadCount > 99 ? "99+" : unreadCount}
+            <div className={`absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 ${
+              isDark ? (role === 'admin' ? 'border-[#1A1F2E]' : 'border-[#1E2430]') : 'border-white'
+            }`}>
+              {unreadCount > 9 ? "9+" : unreadCount}
             </div>
           )}
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className={dropdownContentClasses}>
-        {/* Header */}
-        <div className="px-4 py-3 flex flex-row items-center justify-between">
-          <div className={headerTitleClasses}>
+      <DropdownMenuContent 
+        align="end" 
+        className={`w-96 p-0 overflow-hidden rounded-2xl shadow-2xl border ${
+          isDark 
+            ? 'bg-[#1E2538] border-[#2D3548]' 
+            : 'bg-white border-slate-200'
+        }`}
+      >
+        <div className={`px-5 py-4 border-b flex items-center justify-between ${
+          isDark ? 'border-[#2D3548]' : 'border-slate-100'
+        }`}>
+          <span className={`text-base font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
             Notifications
-          </div>
+          </span>
           {unreadCount > 0 && (
             <button 
-              className={markReadButtonClasses}
               onClick={markAllAsRead}
+              className={`text-xs font-medium transition-colors ${
+                isDark ? 'text-indigo-400 hover:text-indigo-300' : 'text-blue-600 hover:underline'
+              }`}
             >
               Mark all read
             </button>
           )}
         </div>
         
-        <DropdownMenuSeparator className={separatorClasses} />
-
-        {/* List */}
-        <div className="max-h-[320px] overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto">
           {notifications.length === 0 ? (
-            <div className="px-4 py-10 flex flex-col items-center justify-center text-center">
-              <Bell className={`w-8 h-8 mb-3 ${emptyIconClasses}`} />
-              <p className={emptyTextClasses}>No notifications yet</p>
+            <div className="py-12 text-center">
+              <Bell className={`w-8 h-8 mx-auto mb-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
+              <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                No notifications yet
+              </p>
             </div>
           ) : (
             <div className="flex flex-col">
               {notifications.map((notif) => (
-                <DropdownMenuItem
+                <button
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`w-full text-left px-4 py-3 border-b border-transparent transition-colors flex gap-3 items-start cursor-pointer focus:outline-none ${getItemClasses(notif.is_read)}`}
+                  className={`w-full text-left px-5 py-4 border-b last:border-0 transition-colors flex gap-4 items-start ${
+                    isDark 
+                      ? (notif.is_read ? 'hover:bg-[#252B3B]' : 'bg-indigo-900/30 hover:bg-indigo-900/50')
+                      : (notif.is_read ? 'hover:bg-slate-50' : 'bg-blue-50 hover:bg-blue-100/70')
+                  } ${isDark ? 'border-[#2D3548]' : 'border-slate-50'}`}
                 >
-                  {/* Dot indicator */}
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClasses(notif.is_read)}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${
+                    notif.is_read 
+                      ? (isDark ? 'bg-slate-600' : 'bg-slate-300') 
+                      : (isDark ? 'bg-indigo-400' : 'bg-blue-500')
+                  }`} />
                   
                   <div className="flex-1 min-w-0">
-                    <p className={`leading-snug ${getMessageClasses(notif.is_read)}`}>
+                    <p className={`text-[15px] leading-snug mb-1 ${
+                      isDark 
+                        ? (notif.is_read ? 'text-slate-400' : 'text-slate-100')
+                        : (notif.is_read ? 'text-slate-600' : 'text-slate-800 font-medium')
+                    }`}>
                       {notif.message}
                     </p>
-                    <p className={`text-xs mt-0.5 ${timeClasses}`}>
+                    <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                       {timeAgo(notif.created_at)}
                     </p>
                   </div>
-                </DropdownMenuItem>
+                </button>
               ))}
             </div>
           )}
         </div>
 
-        <DropdownMenuSeparator className={separatorClasses} />
-        
-        {/* Footer */}
-        <div className="p-1">
-          <DropdownMenuItem className="w-full justify-center rounded-lg cursor-pointer py-2 focus:outline-none focus:bg-transparent">
-            <span className={`text-xs text-center w-full ${viewAllClasses}`}>
-              View all notifications
-            </span>
-          </DropdownMenuItem>
+        <div className={`px-5 py-3 text-center border-t ${
+          isDark ? 'border-[#2D3548]' : 'border-slate-100'
+        }`}>
+          <button className={`text-sm font-medium ${
+            isDark ? 'text-indigo-400 hover:text-indigo-300' : 'text-blue-600 hover:underline'
+          }`}>
+            View all notifications
+          </button>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
+

@@ -2,22 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Ticket, CheckCircle2, User } from "lucide-react";
+import { LayoutDashboard, CheckCircle2, UserCircle } from "lucide-react";
 
 export default function ITStaffNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "My Queue", href: "/it-staff", icon: Ticket },
+    { name: "My Queue", href: "/it-staff", icon: LayoutDashboard },
     { name: "Resolved", href: "/it-staff/tickets", icon: CheckCircle2 },
-    { name: "Profile", href: "/it-staff/profile", icon: User },
+    { name: "My Profile", href: "/it-staff/profile", icon: UserCircle },
   ];
 
   return (
-    <nav className="flex-1 px-3 py-4 space-y-1">
-      <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 mt-2">
-        Workspace
-      </p>
+    <nav className="flex-1 px-3 space-y-1">
+      <div className="px-3 mb-4">
+        <p className="text-[10px] font-black text-[#7B8FAF] uppercase tracking-[0.2em] opacity-60">MENU</p>
+      </div>
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
@@ -26,13 +26,13 @@ export default function ITStaffNav() {
           <Link
             key={item.name}
             href={item.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 group ${
               isActive
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                : "text-[#7B8FAF] hover:text-white hover:bg-white/5"
             }`}
           >
-            <Icon className={`w-4 h-4 ${isActive ? "text-indigo-200" : "text-slate-400"}`} />
+            <Icon className={`w-4 h-4 transition-colors ${isActive ? "text-white" : "text-[#7B8FAF] group-hover:text-indigo-400"}`} />
             {item.name}
           </Link>
         );
