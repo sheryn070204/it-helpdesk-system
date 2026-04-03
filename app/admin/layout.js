@@ -1,44 +1,45 @@
-import { redirect } from "next/navigation";
+import { redirect } from "next/navigation"; //SENDS YOU TO ANOTHER PAGE
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
 import NotificationBell from "@/components/NotificationBell";
 import AdminNav from "@/components/AdminNav";
-import { Shield, Search, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Shield, Search, LogOut } from "lucide-react"; //ICONS FROM LUCIDE
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; //PREMADE AVATAR
+import { Button } from "@/components/ui/button"; //PREMADE BUTTON
+import { Input } from "@/components/ui/input"; //PREMADE INPUT
 
+//MAIN LAYOUT FUNCTION, WRAPS ALL ADMIN PAGES. {children} IS THE CURRENT PAGE BEING VISITED
 export default async function AdminLayout({ children }) {
-  const supabase = await createClient();
+  const supabase = await createClient(); //OPEN AND STORE THE DATABASE CONNECTION
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(); //ASK THE DATABASE WHO IS CURRENTLY LOGGED IN, STORE IN user
 
-  if (!user) {
-    redirect("/login");
+  if (!user) { //THIS FUNCTION IS TO CHECK IF THE USER IS LOGGED IN
+    redirect("/login"); //AND IF NOT LOGGED IN IT WILL REDIRECT TO LOG IN PAGE
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await supabase //THIS FUNCTION IS TO GET THE PROFILE OF THE USER
     .from("profiles")
     .select("full_name, role")
     .eq("id", user.id)
     .single();
 
   // Only admins allowed
-  if (!profile || profile.role !== "admin") {
-    if (profile?.role === "it_staff" || profile?.role === "it-staff") redirect("/it-staff");
-    redirect("/employee");
+  if (!profile || profile.role !== "admin") { //THIS FUNCTION CHECK IF THE USER IS ADMIN
+    if (profile?.role === "it_staff" || profile?.role === "it-staff") redirect("/it-staff"); //IF STAFF
+    redirect("/employee"); //IF EMPLOYEE
   }
 
-  async function handleSignOut() {
-    "use server";
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/login");
+  async function handleSignOut() { //THIS FUNCTION IS RUN WHEN THE USER CLICK LOG OUT
+    "use server"; //THIS FUNCTION IS RUN ON THE SERVER
+    const supabase = await createClient(); //OPEN DB CONNECTION
+    await supabase.auth.signOut(); //LOG OOUT THE USER FROM DB
+    redirect("/login"); //IF USER LOG OUT IT WILL REDIRECT TO LOG IN PAGE
   }
 
-  const initials = profile.full_name
+  const initials = profile.full_name //CONVERT FULL NAME TO 2 INITIALS
     ?.split(" ")
     .map((n) => n[0])
     .join("")
@@ -95,12 +96,12 @@ export default async function AdminLayout({ children }) {
       <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden bg-[#09090b]">
         {/* Top Header Bar */}
         <header className="h-16 bg-[#09090b] border-b border-slate-800 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-10 shrink-0">
-          
+
           <div className="flex-1 max-w-md hidden sm:flex items-center relative">
             <Search className="w-4 h-4 absolute left-3 text-slate-500" />
-            <Input 
-              type="text" 
-              placeholder="Search all systems..." 
+            <Input
+              type="text"
+              placeholder="Search all systems..."
               className="pl-9 h-9 bg-[#18181b] border-slate-800 text-slate-300 focus-visible:ring-slate-500 w-full rounded-lg text-sm placeholder:text-slate-500"
             />
           </div>
@@ -110,9 +111,9 @@ export default async function AdminLayout({ children }) {
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">System Online</span>
             </div>
-            
+
             <div className="h-5 w-px bg-slate-800 hidden sm:block"></div>
-            
+
             <NotificationBell role="admin" theme="dark" />
           </div>
         </header>

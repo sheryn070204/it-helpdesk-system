@@ -44,3 +44,12 @@ Finally, we tightened up all the gears in the background.
 *   **Fixed the Infinite Redirect / Login Glitch**: Next.js (the framework we use) was occasionally getting confused when trying to read the user's cookies, creating an infinite loop that bounced people out of the system.
 *   We fixed this by writing a custom **Proxy Middleware** to force the server and the browser to sync their security tokens correctly. 
 *   We also upgraded the `login` and `register` pages to use modern **Next.js Server Actions**—meaning the login process is now 100% server-side, incredibly fast, and permanently glitch-free. 
+
+
+ 1 try 
+   2 npx shadcn@latest init
+   3 npx shadcn@latest add button badge card table dropdown-menu dialog avatar separator toast select textarea ... 
+   4 npx shadcn@latest add sonner\
+   5 npx shadcn@latest add sonner
+   6 npx shadcn@latest add badge card table dropdown-menu dialog avatar separator select textarea input label     
+   7 hisotry
