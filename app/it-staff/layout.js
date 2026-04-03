@@ -2,13 +2,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
 import NotificationBell from "@/components/NotificationBell";
+import ITStaffNav from "@/components/ITStaffNav";
+import { Wrench, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
-/**
- * ITStaffLayout — wraps all pages under /it-staff/*.
- *
- * SECURITY: Server-side role guard on every request.
- * - Only users with role = 'it_staff' can enter
- */
 export default async function ITStaffLayout({ children }) {
   const supabase = await createClient();
 
@@ -38,104 +36,78 @@ export default async function ITStaffLayout({ children }) {
     redirect("/login");
   }
 
+  const initials = profile.full_name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase() || "IT";
+
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* ─── Light Sidebar ─── */}
-      <aside className="w-64 flex-shrink-0 bg-slate-50 border-r border-slate-200 flex flex-col min-h-screen">
+    <div className="min-h-screen flex bg-[#0f1117]">
+      {/* ─── Dark Sidebar ─── */}
+      <aside className="w-[220px] flex-shrink-0 bg-[#0c0d12] border-r border-slate-800 flex flex-col min-h-screen">
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-slate-200">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              </svg>
+        <div className="h-16 px-6 border-b border-slate-800 flex items-center">
+          <Link href="/it-staff" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+              <Wrench className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-slate-900 font-bold text-sm leading-tight">IT Support</p>
-              <p className="text-indigo-600 text-xs font-mono">STAFF PORTAL</p>
+              <p className="text-white font-bold text-sm tracking-wide">IT Support</p>
+              <p className="text-indigo-400 text-[10px] uppercase tracking-widest font-mono mt-0.5">Engineer Portal</p>
             </div>
-          </div>
+          </Link>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-2">
-            Tasks
-          </p>
-          <NavLink href="/it-staff" icon="tasks" label="My Tasks" />
-          <NavLink href="/it-staff/tickets" icon="tickets" label="Assigned Tickets" />
-        </nav>
+        {/* Navigation */}
+        <ITStaffNav />
 
-        {/* User Info + Sign Out */}
-        <div className="px-4 py-4 border-t border-slate-200">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm flex-shrink-0">
-              {profile.full_name?.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">{profile.full_name}</p>
-              <p className="text-xs font-mono text-indigo-500">IT Engineer</p>
+        {/* User Info + Log Out */}
+        <div className="px-4 py-4 border-t border-slate-800 bg-[#0c0d12]">
+          <div className="flex items-center gap-3 mb-3 px-2">
+            <Avatar className="w-9 h-9 border border-indigo-900 shadow-sm">
+              <AvatarFallback className="bg-indigo-900 text-indigo-100 font-bold text-xs">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-slate-200 truncate">{profile.full_name}</p>
+              <p className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest mt-0.5">IT Support Eng</p>
             </div>
           </div>
           <form action={handleSignOut}>
-            <button
+            <Button
               type="submit"
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors"
+              variant="ghost"
+              className="w-full flex items-center justify-start gap-2 h-9 px-3 text-slate-400 hover:text-red-400 hover:bg-red-950/30 transition-colors group"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Sign Out
-            </button>
+              <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-400 transition-colors" />
+              <span className="text-sm font-semibold">Log Out</span>
+            </Button>
           </form>
         </div>
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm z-10">
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="h-16 bg-[#0c0d12] border-b border-slate-800 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div>
-            <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">Workspace</p>
+            <p className="text-xs font-mono text-slate-500 uppercase tracking-widest hidden sm:block">Active Workspace</p>
           </div>
-          <div className="flex items-center gap-4">
-            <NotificationBell role="it_staff" />
+          <div className="flex items-center gap-4 ml-auto">
+            <NotificationBell role="it_staff" theme="dark" />
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8">
+          <div className="w-full text-slate-200">
+            {children}
+          </div>
         </main>
       </div>
     </div>
-  );
-}
-
-// ─── Sidebar Nav Link ───
-function NavLink({ href, icon, label }) {
-  const icons = {
-    tasks: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-    tickets: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-    )
-  };
-
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors group"
-    >
-      <span className="text-slate-400 group-hover:text-indigo-600 transition-colors">
-        {icons[icon]}
-      </span>
-      {label}
-    </Link>
   );
 }

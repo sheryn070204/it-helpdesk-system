@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 // Load the Inter font from Google Fonts for a clean, professional look
 const inter = Inter({ subsets: ["latin"] });
@@ -16,8 +17,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full antialiased`}>
+      <body className={`${inter.className} h-full antialiased bg-gray-50 text-slate-900`}>
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

@@ -1,15 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
-export default function NotificationBell({ role = "employee" }) {
+export default function NotificationBell({ role = "employee", theme = "light" }) {
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
-  const [isOpen, setIsOpen] = useState(false);
   const [userId, setUserId] = useState(null);
-  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   // 1. Fetch current user & notifications on mount
   useEffect(() => {
@@ -21,15 +29,6 @@ export default function NotificationBell({ role = "employee" }) {
       }
     };
     init();
-
-    // Close dropdown if clicked outside
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // 2. Polling every 30 seconds
@@ -56,7 +55,7 @@ export default function NotificationBell({ role = "employee" }) {
 
   // 3. Mark all as read
   async function markAllAsRead(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     if (!userId) return;
     await supabase
       .from("notifications")
@@ -70,9 +69,7 @@ export default function NotificationBell({ role = "employee" }) {
   }
 
   // 4. Handle Notification Click
-  async function handleNotificationClick(event, notif) {
-    event.preventDefault();
-    
+  async function handleNotificationClick(notif) {
     // Mark specifically as read
     if (!notif.is_read) {
       await supabase
@@ -91,7 +88,7 @@ export default function NotificationBell({ role = "employee" }) {
     let route = "/employee/tickets"; 
     if (role === "admin") {
       route = `/admin/tickets/${notif.ticket_id}`;
-    } else if (role === "it_staff") {
+    } else if (role === "it_staff" || role === "it-staff") {
       route = `/it-staff/tickets/${notif.ticket_id}`;
     }
     router.push(route);
@@ -114,74 +111,149 @@ export default function NotificationBell({ role = "employee" }) {
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  // 6. Dynamic bell styling based on the portal
-  const bellStyles = {
-    employee: "text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100",
-    admin: "text-gray-300 hover:text-white bg-slate-800 hover:bg-slate-700",
-    it_staff: "text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+  // Render Theme Maps
+  const isDark = theme === "dark";
+
+  // Bell Button Styles
+  const bellButtonClasses = isDark
+    ? "text-slate-300 hover:text-white"
+    : "text-slate-600 hover:text-slate-900";
+
+  // Dropdown Menu container
+  const dropdownContentClasses = isDark
+    ? "bg-[#1E293B] border border-slate-700 shadow-xl rounded-xl w-80 p-0"
+    : "bg-white border border-slate-200 shadow-lg rounded-xl w-80 p-0";
+
+  // Header Title
+  const headerTitleClasses = isDark
+    ? "text-white font-semibold text-sm"
+    : "text-slate-900 font-semibold text-sm";
+
+  // Mark all read button
+  const markReadButtonClasses = isDark
+    ? "text-indigo-400 text-xs hover:text-indigo-300"
+    : "text-blue-600 text-xs hover:underline";
+
+  // Separator
+  const separatorClasses = isDark ? "bg-slate-700 m-0" : "bg-slate-100 m-0";
+
+  // Notification Item
+  const getItemClasses = (isRead) => {
+    if (isDark) {
+      return isRead 
+        ? "bg-transparent hover:bg-slate-800" 
+        : "bg-indigo-950/40 hover:bg-indigo-950/60";
+    } else {
+      return isRead 
+        ? "bg-white hover:bg-slate-50" 
+        : "bg-blue-50 hover:bg-blue-100";
+    }
   };
 
-  const currentBellStyle = bellStyles[role] || bellStyles.employee;
+  // Dot
+  const getDotClasses = (isRead) => {
+    if (isDark) {
+      return isRead ? "bg-slate-600" : "bg-indigo-400";
+    } else {
+      return isRead ? "bg-transparent" : "bg-blue-500";
+    }
+  };
+
+  // Text inside notification
+  const getMessageClasses = (isRead) => {
+    if (isDark) {
+      return isRead ? "text-slate-400 text-sm" : "text-slate-100 text-sm font-medium";
+    } else {
+      return isRead ? "text-slate-600 text-sm" : "text-slate-800 text-sm font-medium";
+    }
+  };
+  
+  const timeClasses = isDark ? "text-slate-500" : "text-slate-400";
+
+  // Empty state text
+  const emptyIconClasses = isDark ? "text-slate-600" : "text-slate-300";
+  const emptyTextClasses = "text-slate-500 text-sm";
+  const viewAllClasses = isDark ? "text-indigo-400" : "text-blue-600";
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Bell Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-full transition-colors ${currentBellStyle}`}
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-        {/* Unread Badge */}
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-        )}
-      </button>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`relative rounded-full transition-colors ${bellButtonClasses}`}
+        >
+          <Bell className="w-5 h-5" />
+          {/* Unread Badge overlay */}
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-transparent">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </div>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-            <h3 className="font-semibold text-gray-900 text-sm">Notifications</h3>
-            {unreadCount > 0 && (
-              <button 
-                onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Mark all read
-              </button>
-            )}
+      <DropdownMenuContent align="end" className={dropdownContentClasses}>
+        {/* Header */}
+        <div className="px-4 py-3 flex flex-row items-center justify-between">
+          <div className={headerTitleClasses}>
+            Notifications
           </div>
-
-          {/* List */}
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                No notifications yet.
-              </div>
-            ) : (
-              notifications.map((notif) => (
-                <button
-                  key={notif.id}
-                  onClick={(e) => handleNotificationClick(e, notif)}
-                  className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                    !notif.is_read ? "bg-blue-50/50" : ""
-                  }`}
-                >
-                  <p className={`text-sm ${!notif.is_read ? "text-gray-900 font-medium" : "text-gray-600"}`}>
-                    {notif.message}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {timeAgo(notif.created_at)}
-                  </p>
-                </button>
-              ))
-            )}
-          </div>
+          {unreadCount > 0 && (
+            <button 
+              className={markReadButtonClasses}
+              onClick={markAllAsRead}
+            >
+              Mark all read
+            </button>
+          )}
         </div>
-      )}
-    </div>
+        
+        <DropdownMenuSeparator className={separatorClasses} />
+
+        {/* List */}
+        <div className="max-h-[320px] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="px-4 py-10 flex flex-col items-center justify-center text-center">
+              <Bell className={`w-8 h-8 mb-3 ${emptyIconClasses}`} />
+              <p className={emptyTextClasses}>No notifications yet</p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {notifications.map((notif) => (
+                <DropdownMenuItem
+                  key={notif.id}
+                  onClick={() => handleNotificationClick(notif)}
+                  className={`w-full text-left px-4 py-3 border-b border-transparent transition-colors flex gap-3 items-start cursor-pointer focus:outline-none ${getItemClasses(notif.is_read)}`}
+                >
+                  {/* Dot indicator */}
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getDotClasses(notif.is_read)}`} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className={`leading-snug ${getMessageClasses(notif.is_read)}`}>
+                      {notif.message}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${timeClasses}`}>
+                      {timeAgo(notif.created_at)}
+                    </p>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <DropdownMenuSeparator className={separatorClasses} />
+        
+        {/* Footer */}
+        <div className="p-1">
+          <DropdownMenuItem className="w-full justify-center rounded-lg cursor-pointer py-2 focus:outline-none focus:bg-transparent">
+            <span className={`text-xs text-center w-full ${viewAllClasses}`}>
+              View all notifications
+            </span>
+          </DropdownMenuItem>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

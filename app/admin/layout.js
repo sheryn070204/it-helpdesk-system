@@ -2,17 +2,12 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
 import NotificationBell from "@/components/NotificationBell";
+import AdminNav from "@/components/AdminNav";
+import { Shield, Search, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-/**
- * AdminLayout — wraps all pages under /admin/*.
- *
- * SECURITY: Server-side role guard on every request.
- * - Only users with role = 'admin' can enter
- * - Everyone else gets redirected
- *
- * Design: Dark sidebar + light content area
- * (Professional IT operations dashboard aesthetic)
- */
 export default async function AdminLayout({ children }) {
   const supabase = await createClient();
 
@@ -30,7 +25,7 @@ export default async function AdminLayout({ children }) {
     .eq("id", user.id)
     .single();
 
-  // Only admins allowed — route other roles to their correct portal
+  // Only admins allowed
   if (!profile || profile.role !== "admin") {
     if (profile?.role === "it_staff" || profile?.role === "it-staff") redirect("/it-staff");
     redirect("/employee");
@@ -43,108 +38,92 @@ export default async function AdminLayout({ children }) {
     redirect("/login");
   }
 
+  const initials = profile.full_name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase() || "AD";
+
   return (
-    <div className="min-h-screen flex bg-slate-100">
+    <div className="min-h-screen flex bg-[#09090b]">
       {/* ─── Dark Sidebar ─── */}
-      <aside className="w-64 flex-shrink-0 bg-slate-900 flex flex-col min-h-screen">
+      <aside className="w-[240px] flex-shrink-0 bg-[#09090b] border-r border-slate-800 flex flex-col min-h-screen relative z-20">
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-slate-700">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-              </svg>
+        <div className="h-16 px-6 border-b border-slate-800 flex items-center">
+          <Link href="/admin" className="flex items-center gap-3 transition-opacity hover:opacity-80">
+            <div className="w-8 h-8 bg-zinc-800 border border-slate-700 rounded-full flex items-center justify-center shadow-sm">
+              <Shield className="w-4 h-4 text-slate-300" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-tight">IT Helpdesk</p>
-              <p className="text-indigo-400 text-xs font-mono">ADMIN PORTAL</p>
+              <p className="text-white font-bold text-sm tracking-wide">HelpDesk</p>
+              <p className="text-slate-500 text-[10px] uppercase tracking-widest font-mono mt-0.5">Admin Portal</p>
             </div>
-          </div>
+          </Link>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-            Operations
-          </p>
-          <NavLink href="/admin" icon="dashboard" label="Dashboard" />
-          <NavLink href="/admin/tickets" icon="tickets" label="All Tickets" />
-        </nav>
+        {/* Navigation */}
+        <AdminNav />
 
-        {/* User Info + Sign Out */}
-        <div className="px-4 py-4 border-t border-slate-700">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {profile.full_name?.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-white truncate">{profile.full_name}</p>
-              <p className="text-xs font-mono text-indigo-400">IT Admin</p>
+        {/* User Info + Log Out */}
+        <div className="px-4 py-4 border-t border-slate-800 bg-[#09090b]">
+          <div className="flex items-center gap-3 mb-3 px-2">
+            <Avatar className="w-9 h-9 border border-slate-700">
+              <AvatarFallback className="bg-slate-800 text-slate-300 font-bold text-xs">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-200 truncate">{profile.full_name}</p>
+              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Administrator</p>
             </div>
           </div>
           <form action={handleSignOut}>
-            <button
+            <Button
               type="submit"
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              variant="ghost"
+              className="w-full flex items-center justify-start gap-2 h-9 px-3 text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors group"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Sign Out
-            </button>
+              <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-400 transition-colors" />
+              <span className="text-sm font-medium">Log out securely</span>
+            </Button>
           </form>
         </div>
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">IT Operations Center</p>
+      <div className="flex-1 flex flex-col min-w-0 max-h-screen overflow-hidden bg-[#09090b]">
+        {/* Top Header Bar */}
+        <header className="h-16 bg-[#09090b] border-b border-slate-800 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-10 shrink-0">
+          
+          <div className="flex-1 max-w-md hidden sm:flex items-center relative">
+            <Search className="w-4 h-4 absolute left-3 text-slate-500" />
+            <Input 
+              type="text" 
+              placeholder="Search all systems..." 
+              className="pl-9 h-9 bg-[#18181b] border-slate-800 text-slate-300 focus-visible:ring-slate-500 w-full rounded-lg text-sm placeholder:text-slate-500"
+            />
           </div>
-          <div className="flex items-center gap-4">
-            <NotificationBell role="admin" />
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-slate-500 font-mono">SYSTEM ONLINE</span>
+
+          <div className="flex items-center gap-5 ml-auto">
+            <div className="flex items-center gap-2 hidden lg:flex bg-emerald-950/30 px-3 py-1.5 rounded-full border border-emerald-900/50">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">System Online</span>
             </div>
+            
+            <div className="h-5 w-px bg-slate-800 hidden sm:block"></div>
+            
+            <NotificationBell role="admin" theme="dark" />
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-8">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+          <div className="w-full text-slate-200">
+            {children}
+          </div>
         </main>
       </div>
     </div>
-  );
-}
-
-// ─── Sidebar Nav Link Component ───
-function NavLink({ href, icon, label }) {
-  const icons = {
-    dashboard: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-    tickets: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-  };
-
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors group"
-    >
-      <span className="text-slate-500 group-hover:text-indigo-400 transition-colors">
-        {icons[icon]}
-      </span>
-      {label}
-    </Link>
   );
 }

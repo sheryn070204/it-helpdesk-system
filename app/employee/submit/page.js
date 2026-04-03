@@ -3,9 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { createNotification } from "@/lib/notifications";
+import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Plus, Loader2 } from "lucide-react";
 
 // ─────────────────────────────────────────────
-// PRIORITY DETECTION ENGINE
+// PRIORITY DETECTION ENGINE (Logic Preserved Exactly)
 // ─────────────────────────────────────────────
 const PRIORITY_RULES = [
   {
@@ -81,7 +89,6 @@ export default function SubmitTicketPage() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState(detectPriority(""));
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
@@ -95,18 +102,22 @@ export default function SubmitTicketPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!title.trim() || !description.trim()) {
+      toast.warning("Please fill out both the title and description.");
+      return;
+    }
+
     setLoading(true);
-    setError("");
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      setError("You must be logged in to submit a ticket.");
+      toast.error("You must be logged in to submit a ticket.");
       setLoading(false);
       return;
     }
 
-    const { error: insertError } = await supabase.from("tickets").insert([
+    const { data: insertedTicket, error: insertError } = await supabase.from("tickets").insert([
       {
         title: title.trim(),
         description: description.trim(),
@@ -114,92 +125,91 @@ export default function SubmitTicketPage() {
         status: "open",
         submitted_by: user.id,
       },
-    ]);
+    ]).select().single();
 
     if (insertError) {
-      setError(insertError.message);
+      toast.error(insertError.message);
       setLoading(false);
       return;
     }
 
-    router.push("/employee/tickets?submitted=true");
+    // ─────────────────────────────────────────────
+    // NOTIFICATIONS ENGINE
+    // ─────────────────────────────────────────────
+    // Notify ALL Admins automatically
+    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+    const { data: allAdmins } = await supabase.from("profiles").select("id").eq("role", "admin");
+    
+    if (allAdmins && insertedTicket) {
+      for (const admin of allAdmins) {
+        await createNotification(
+          admin.id,
+          insertedTicket.id,
+          "new_ticket",
+          `📋 New ${priority.level.toUpperCase()} ticket submitted by ${profile?.full_name || 'Employee'}:\n'${title.trim()}'`
+        );
+      }
+    }
+
+    toast.success("Ticket submitted successfully!");
+    router.push("/employee/tickets");
   }
 
-  const charCount = description.length;
-
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* ─── Hero Header ─── */}
-      <div className="mb-10 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-6 shadow-sm">
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </div>
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Submit It Request</h1>
-        <p className="text-gray-500 mt-3 text-lg max-w-xl mx-auto">
-          Describe the problem you're experiencing. We use automated keyword detection to route your ticket immediately.
-        </p>
-      </div>
-
-      {/* ─── Form Card ─── */}
-      <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+    <div className="max-w-2xl mx-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <Card className="shadow-lg border-slate-200">
         <form onSubmit={handleSubmit}>
-          <div className="p-8 md:p-12 space-y-8">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4">
-                <svg className="w-6 h-6 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <p className="text-red-800 font-medium">{error}</p>
-              </div>
-            )}
+          <CardHeader className="text-center pb-8 border-b border-slate-100 bg-slate-50/50 rounded-t-xl mb-6">
+            <div className="mx-auto w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
+              <Plus className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-900">Submit a Support Ticket</CardTitle>
+            <CardDescription className="text-base text-slate-500 mt-2">
+              Describe your issue and our team will help you. We use automated keyword detection to route your ticket immediately.
+            </CardDescription>
+          </CardHeader>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-800 tracking-wide uppercase" htmlFor="title">
-                What do you need help with? <span className="text-blue-500">*</span>
-              </label>
-              <input
+          <CardContent className="space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="title" className="text-slate-800 font-semibold text-sm">
+                Issue Title <span className="text-blue-500">*</span>
+              </Label>
+              <Input
                 id="title"
-                type="text"
-                required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Can't connect to the printer"
+                placeholder="Brief summary of your issue"
                 maxLength={120}
-                className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-400 text-lg font-medium"
+                className="h-12 px-4 shadow-sm focus-visible:ring-blue-500 border-slate-200"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-bold text-gray-800 tracking-wide uppercase" htmlFor="description">
-                  Details <span className="text-blue-500">*</span>
-                </label>
-                <div className="text-sm font-medium text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                  {charCount} chars
-                </div>
+                <Label htmlFor="description" className="text-slate-800 font-semibold text-sm">
+                  Description <span className="text-blue-500">*</span>
+                </Label>
+                <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded">
+                  {description.length} chars
+                </span>
               </div>
-
-              <textarea
+              <Textarea
                 id="description"
-                required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Share any error messages, what you were trying to do, and when it started..."
-                rows={6}
-                className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white border focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all text-gray-900 placeholder-gray-400 text-base resize-none"
+                placeholder="Describe the problem in detail..."
+                className="min-h-40 p-4 resize-none shadow-sm focus-visible:ring-blue-500 border-slate-200"
               />
             </div>
 
-            {/* ─── Animated Priority Badge ─── */}
+            {/* ─── LIVE PRIORITY BADGE SECTION ─── */}
             <div className="pt-2">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">
+              <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block text-center">
                 Automated System Analysis
-              </p>
+              </Label>
               <div
-                className={`rounded-2xl border-2 p-5 transition-all duration-500 ease-out ${priority.badgeClass} ${
-                  animating ? "scale-105 shadow-xl -rotate-1" : "scale-100 shadow-sm"
+                className={`rounded-xl border-2 p-5 transition-all duration-500 ease-out ${priority.badgeClass} ${
+                  animating ? "scale-[1.02] shadow-md -rotate-1" : "scale-100 shadow-sm"
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -210,12 +220,12 @@ export default function SubmitTicketPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-extrabold text-lg tracking-tight mb-1">
+                    <h4 className="font-extrabold text-base tracking-tight mb-1">
                       {priority.label}
                     </h4>
-                    <p className="text-sm font-medium opacity-80 mb-3">{priority.message}</p>
+                    <p className="text-xs font-medium opacity-80 mb-3">{priority.message}</p>
 
-                    <div className="h-2 w-full bg-black/5 rounded-full overflow-hidden flex">
+                    <div className="h-1.5 w-full bg-black/5 rounded-full overflow-hidden flex">
                       {["low", "medium", "high", "critical"].map((lvl) => (
                         <div
                           key={lvl}
@@ -231,52 +241,49 @@ export default function SubmitTicketPage() {
                     </div>
 
                     {priority.detectedKeywords.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2 items-center">
-                        <span className="text-xs font-bold uppercase tracking-wider opacity-60">
-                          Triggers:
+                      <div className="mt-4">
+                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-60 block mb-1.5">
+                          Detected Keywords:
                         </span>
-                        {priority.detectedKeywords.map((kw) => (
-                          <span key={kw} className="px-3 py-1 bg-white/70 rounded-full text-xs font-black shadow-sm">
-                            "{kw}"
-                          </span>
-                        ))}
+                        <div className="flex flex-wrap gap-1.5">
+                          {priority.detectedKeywords.map((kw) => (
+                            <span key={kw} className="px-2 py-0.5 bg-white/70 rounded text-[10px] font-bold shadow-sm border border-black/5">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </CardContent>
 
-          <div className="p-6 md:px-12 md:py-8 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <p className="text-sm text-gray-500 font-medium text-center sm:text-left">
-              You will receive a notification when the IT team is assigned to your ticket.
-            </p>
-            <button
-              type="submit"
-              disabled={loading || !title.trim() || !description.trim()}
-              className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_8px_30px_rgb(37,99,235,0.2)] hover:shadow-[0_8px_30px_rgb(37,99,235,0.4)] hover:-translate-y-1"
+          <CardFooter className="flex flex-col gap-3 pt-4 border-t border-slate-100 bg-slate-50/50 rounded-b-xl px-6 py-5">
+            <Button 
+              type="submit" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-12 shadow-sm transition-transform hover:-translate-y-0.5"
+              disabled={loading}
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin w-5 h-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12V0a12 12 0 0112 12h-4a8 8 0 00-8-8z" />
-                  </svg>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   Submitting Request...
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                  Submit Securely
+                  <Plus className="w-5 h-5 mr-2" />
+                  Submit Ticket
                 </>
               )}
-            </button>
-          </div>
+            </Button>
+            <p className="text-xs text-slate-500 font-medium text-center">
+              Priority is automatically detected based on Description keywords.
+            </p>
+          </CardFooter>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

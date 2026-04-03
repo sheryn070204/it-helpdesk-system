@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabaseServer";
 import Link from "next/link";
+import { ShieldAlert, AlertTriangle, AlertCircle, Info, Ticket, Clock, Loader2, CheckCircle2, UserCheck } from "lucide-react";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getPriorityBadge, getStatusBadge } from "@/lib/badgeHelpers";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -8,8 +13,9 @@ export default async function AdminDashboard() {
   const { data: tickets } = await supabase
     .from("tickets")
     .select(`
-      id, title, priority, status, created_at,
-      submitter:profiles!tickets_submitted_by_fkey (full_name)
+      id, title, priority, status, created_at, assigned_to,
+      submitter:profiles!tickets_submitted_by_fkey (full_name),
+      assignee:profiles!tickets_assigned_to_fkey (full_name)
     `)
     .order("created_at", { ascending: false });
 
@@ -17,7 +23,8 @@ export default async function AdminDashboard() {
   const t = tickets || [];
   const total = t.length;
   const critical = t.filter(x => x.priority === "critical" && x.status !== "resolved").length;
-  const unassigned = t.filter(x => x.status === "open").length; // assuming open means needing action/assignment
+  const open = t.filter(x => x.status === "open").length;
+  const inProgress = t.filter(x => x.status === "in_progress").length;
   const resolved = t.filter(x => x.status === "resolved").length;
 
   // 2. Priority Breakdown Data (CSS Chart)
@@ -27,152 +34,197 @@ export default async function AdminDashboard() {
     medium: t.filter(x => x.priority === "medium").length,
     low: t.filter(x => x.priority === "low").length,
   };
-  // Math for percentages
   const maxP = Math.max(pCounts.critical, pCounts.high, pCounts.medium, pCounts.low) || 1;
 
-  // 3. Recent Critical/High tickets
+  // 3. Recent Critical/High tickets (Urgent)
   const urgentTickets = t
     .filter(x => (x.priority === "critical" || x.priority === "high") && x.status !== "resolved")
     .slice(0, 5);
 
+  const recentTickets = t.slice(0, 8);
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
       
-      {/* ─── Page Header & Quick Actions ─── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">System Overview</h1>
-          <p className="text-sm font-mono text-slate-500 mt-1 uppercase tracking-wider">
-            Live Metrics & Operations
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/admin/tickets" className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors border border-slate-700 font-mono">
-            Access Master Logs
-          </Link>
+          <h1 className="text-2xl font-bold text-white tracking-tight">System Overview</h1>
+          <p className="text-sm text-slate-400 font-medium mt-1">Live Helpdesk Metrics & Operations</p>
         </div>
       </div>
 
-      {/* ─── Top KPI Row ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard title="Active Critical" value={critical} trend={critical > 0 ? "URGENT" : "SAFE"} alert={critical > 0} color="red" />
-        <KpiCard title="Unassigned / Open" value={unassigned} trend="QUEUE" color="indigo" />
-        <KpiCard title="Total Resolved" value={resolved} trend="COMPLETE" color="emerald" />
-        <KpiCard title="System Volume" value={total} trend="LIFETIME" color="slate" />
+      {/* ─── KPI Stats Row ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <KpiCard title="Total Tickets" value={total} icon={Ticket} color="text-slate-400" bg="bg-slate-800" border="border-slate-800" />
+        <KpiCard title="Open Queue" value={open} icon={Clock} color="text-blue-400" bg="bg-blue-900/30" border="border-blue-900/50" />
+        <KpiCard title="In Progress" value={inProgress} icon={Loader2} color="text-amber-400" bg="bg-amber-900/30" border="border-amber-900/50" />
+        <KpiCard title="Resolved" value={resolved} icon={CheckCircle2} color="text-emerald-400" bg="bg-emerald-900/30" border="border-emerald-900/50" />
+        <KpiCard 
+          title="Active Critical" 
+          value={critical} 
+          icon={ShieldAlert} 
+          color="text-red-400" 
+          bg="bg-red-900/30" 
+          border="border-red-900/50"
+          alert={critical > 0} 
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        
-        {/* ─── Priority Volume Chart (CSS-based) ─── */}
-        <div className="lg:col-span-1 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-            Priority Distribution
-          </h2>
-          <div className="space-y-5">
-            <ChartBar label="Critical" count={pCounts.critical} max={maxP} color="bg-red-500" text="text-red-700" bg="bg-red-50" />
-            <ChartBar label="High" count={pCounts.high} max={maxP} color="bg-orange-500" text="text-orange-700" bg="bg-orange-50" />
-            <ChartBar label="Medium" count={pCounts.medium} max={maxP} color="bg-amber-500" text="text-amber-700" bg="bg-amber-50" />
-            <ChartBar label="Low" count={pCounts.low} max={maxP} color="bg-emerald-500" text="text-emerald-700" bg="bg-emerald-50" />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ─── Priority Breakdown ─── */}
+        <Card className="lg:col-span-1 shadow-sm border-slate-800 bg-[#18181b]">
+          <CardHeader className="pb-4">
+            <h2 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Tickets by Priority</h2>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <ChartBar label="Critical" count={pCounts.critical} max={maxP} bg="bg-red-500" icon={ShieldAlert} iconColor="text-red-500" />
+            <ChartBar label="High" count={pCounts.high} max={maxP} bg="bg-orange-500" icon={AlertTriangle} iconColor="text-orange-500" />
+            <ChartBar label="Medium" count={pCounts.medium} max={maxP} bg="bg-amber-500" icon={AlertCircle} iconColor="text-amber-500" />
+            <ChartBar label="Low" count={pCounts.low} max={maxP} bg="bg-emerald-500" icon={Info} iconColor="text-emerald-500" />
+          </CardContent>
+        </Card>
 
-        {/* ─── Urgent Action Required ─── */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl flex flex-col shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-              Urgent Attention Required
-            </h2>
-            <span className="text-xs font-mono text-slate-400">Top {urgentTickets.length} items</span>
+        {/* ─── Urgent Tickets ─── */}
+        <Card className="lg:col-span-2 shadow-[0_0_20px_rgba(239,68,68,0.05)] border-red-900/30 bg-[#18181b] overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-red-900/20 bg-red-950/10 flex items-center gap-3">
+             <div className="relative">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <div className="absolute inset-0 w-5 h-5 bg-red-500 rounded-full animate-ping opacity-20" />
+             </div>
+             <div>
+               <h2 className="text-xs font-black text-red-500 uppercase tracking-[0.2em]">Urgent Response Required</h2>
+               <p className="text-[10px] text-red-400/60 font-bold uppercase tracking-wider">Critical priority tickets awaiting triage</p>
+             </div>
           </div>
-          
-          <div className="flex-1 overflow-auto">
+          <CardContent className="flex-1 p-0 overflow-auto">
             {urgentTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full p-10 text-center">
-                <svg className="w-10 h-10 text-emerald-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="font-semibold text-slate-700">No active critical threats.</p>
-                <p className="text-xs text-slate-400 mt-1">System is healthy and queues are managed.</p>
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <CheckCircle2 className="w-12 h-12 text-emerald-500 mb-3" />
+                <p className="font-bold text-slate-200 text-lg">No urgent tickets!</p>
+                <p className="text-sm text-slate-500 mt-1">The system is currently healthy.</p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm">
-                <tbody className="divide-y divide-slate-100">
-                  {urgentTickets.map(ticket => (
-                    <tr key={ticket.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border ${
-                            ticket.priority === 'critical' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'
-                          }`}>
-                            {ticket.priority}
-                          </span>
-                          <span className="font-mono text-xs text-slate-400">#{ticket.id.slice(0, 8)}</span>
-                        </div>
-                        <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                          {ticket.title}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                        {ticket.submitter?.full_name}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link 
-                          href={`/admin/tickets/${ticket.id}`}
-                          className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-800 hover:text-white hover:border-slate-800 rounded-lg text-xs font-bold transition-all"
-                        >
-                          Triage &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="divide-y divide-slate-800/50">
+                {urgentTickets.map(ticket => (
+                  <div key={ticket.id} className="p-5 flex items-center justify-between gap-4 hover:bg-slate-800/50 transition-colors border-l-4 border-l-transparent hover:border-l-red-500">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1.5">
+                        {getPriorityBadge(ticket.priority)}
+                        <span className="text-xs font-mono text-slate-500">#{ticket.id.slice(0, 8)}</span>
+                      </div>
+                      <p className="font-bold text-white text-base truncate">{ticket.title}</p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Reported by <span className="font-semibold text-slate-300">{ticket.submitter?.full_name}</span> • {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div>
+                      <Link href={`/admin/tickets/${ticket.id}`}>
+                        <Button variant="outline" size="sm" className="font-bold text-indigo-400 hover:text-indigo-300 border-indigo-900/50 hover:bg-indigo-950/50 bg-[#09090b]">
+                          View
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* ─── Recent Tickets Table ─── */}
+      <Card className="shadow-sm border-slate-800 bg-[#18181b] overflow-hidden">
+        <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-transparent">
+          <h2 className="text-xs font-bold text-white uppercase tracking-[0.2em]">Recent System Activity</h2>
+          <Link href="/admin/tickets">
+            <Button variant="link" className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest p-0 h-auto hover:text-indigo-300">View Entire Queue →</Button>
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-white/5 hover:bg-transparent h-14 bg-transparent transition-none">
+                <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest pl-8 w-[100px]">ID Ref</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest">Incident</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest text-center">Priority</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest text-center">Status</TableHead>
+                <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-widest text-right pr-8">Operations</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentTickets.map(ticket => (
+                <TableRow key={ticket.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors h-16 group">
+                  <TableCell className="pl-8 font-mono text-[10px] text-slate-500">
+                    {ticket.id.slice(0, 8)}
+                  </TableCell>
+                  <TableCell className="py-2">
+                     <div className="flex flex-col gap-0.5">
+                       <span className="font-bold text-slate-100 text-sm max-w-[250px] truncate">{ticket.title}</span>
+                       <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">By: {ticket.submitter?.full_name || "Unknown"}</span>
+                     </div>
+                  </TableCell>
+                  <TableCell className="text-center px-4">
+                    {getPriorityBadge(ticket.priority)}
+                  </TableCell>
+                  <TableCell className="text-center px-4">
+                    {getStatusBadge(ticket.status)}
+                  </TableCell>
+                  <TableCell className="text-right pr-8">
+                    <Link href={`/admin/tickets/${ticket.id}`}>
+                      <Button variant="ghost" size="sm" className="font-bold text-[10px] uppercase tracking-widest text-indigo-400 hover:text-white hover:bg-indigo-600/20 border border-transparent hover:border-indigo-500/30 transition-all rounded-lg px-6 h-9 bg-indigo-500/5">
+                        Analyze
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
     </div>
   );
 }
 
 // ─── Sub-components ───
 
-function KpiCard({ title, value, trend, alert = false, color = "indigo" }) {
-  const colors = {
-    indigo: "border-indigo-500 text-indigo-600 bg-indigo-50",
-    red: "border-red-500 text-red-600 bg-red-50",
-    emerald: "border-emerald-500 text-emerald-600 bg-emerald-50",
-    slate: "border-slate-400 text-slate-600 bg-slate-50"
-  };
-  
+function KpiCard({ title, value, icon: Icon, color, bg, border = "border-slate-800", alert }) {
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 p-6 shadow-sm relative overflow-hidden ${alert ? 'ring-1 ring-red-500 ring-opacity-20' : ''}`}>
-      {alert && <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>}
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
-      <div className="flex items-end justify-between mt-3">
-        <p className="text-4xl font-black text-slate-900 tracking-tight">{value}</p>
-        <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded border ${colors[color]}`}>
-          {trend}
-        </span>
-      </div>
-    </div>
+    <Card className={`overflow-hidden bg-[#18181b] shadow-sm transition-all hover:shadow-md border ${alert ? 'border-red-900/50 ring-1 ring-red-500/20' : border}`}>
+      {alert && <div className="h-1 w-full bg-red-500 absolute top-0 left-0" />}
+      <CardContent className="p-5">
+        <div className="flex justify-between items-start mb-4">
+          <div className={`p-2 rounded-xl ${bg} ${color}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+        </div>
+        <div>
+          <p className="text-3xl font-black text-white tracking-tight leading-none mb-1.5">{value}</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{title}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function ChartBar({ label, count, max, color, text, bg }) {
+function ChartBar({ label, count, max, bg, icon: Icon, iconColor }) {
   const widthPct = Math.round((count / max) * 100) + "%";
   return (
     <div>
-      <div className="flex justify-between text-xs font-bold mb-1.5">
-        <span className="text-slate-600 uppercase tracking-wider">{label}</span>
-        <span className={text}>{count}</span>
+      <div className="flex justify-between items-center text-sm font-bold mb-2">
+        <span className="text-slate-400 flex items-center gap-1.5">
+          <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
+          {label}
+        </span>
+        <span className="text-slate-300 bg-slate-800 px-2 py-0.5 rounded text-xs">{count}</span>
       </div>
-      <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
+      <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
         <div 
-          className={`h-full rounded-full transition-all duration-1000 ${color}`} 
+          className={`h-full rounded-full transition-all duration-1000 ${bg}`} 
           style={{ width: count === 0 ? "0%" : widthPct }}
-        ></div>
+        />
       </div>
     </div>
   );
