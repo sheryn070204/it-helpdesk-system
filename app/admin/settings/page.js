@@ -40,6 +40,28 @@ export default function AdminSettings() {
 
   useEffect(() => {
     fetchUsers();
+
+    // Realtime subscription: auto-update when IT staff profiles change
+    const channel = supabase
+      .channel('it-staff-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: 'role=eq.it_staff',
+        },
+        () => {
+          // Re-fetch the full list whenever any it_staff profile changes
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function fetchUsers() {
@@ -48,7 +70,7 @@ export default function AdminSettings() {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .or('role.eq.it_staff,role.eq.it-staff')
+      .eq("role", "it_staff")
       .order("full_name", { ascending: true });
 
     if (!error && data) {

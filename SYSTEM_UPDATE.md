@@ -11,7 +11,7 @@ Previously, we only had Employees and Admins. Today, we upgraded the system to s
 *   **🛠️ IT Staff (`/it-staff`)**: A brand new dedicated role. IT engineers use this portal to view tickets assigned to them, update their progress, and resolve them.
 *   **👑 Admin (`/admin`)**: The command center. Admins can view all tickets from all users, check data metrics, and assign tickets directly to specific IT Staff members.
 
-*(Note: We updated the system so both `it_staff` and `it-staff` inside the Supabase database will correctly grant access to the IT portal!)*
+*(Note: We standardized the system to use `it_staff` (with an underscore) inside the Supabase database. A new database-level "Gatekeeper" rule now prevents any spelling mistakes like "it-staff" from happening!)*
 
 ---
 

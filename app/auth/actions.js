@@ -31,7 +31,7 @@ export async function loginAction(formData) {
 
   if (profile.role === "admin") {
     redirect("/admin");
-  } else if (profile.role === "it_staff" || profile.role === "it-staff") {
+  } else if (profile.role === "it_staff") {
     redirect("/it-staff");
   } else {
     redirect("/employee");

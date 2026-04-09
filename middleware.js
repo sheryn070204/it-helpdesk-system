@@ -8,9 +8,9 @@ import { NextResponse } from "next/server";
  * It refreshes the user's auth session on every request so that
  * Server Components (layouts) can reliably read the session via cookies.
  *
- * WITHOUT THIS FILE → getUser() returns null intermittently → redirect loops!
+ * This MUST be named middleware.js and exported as "middleware".
  */
-export async function proxy(request) {
+export async function middleware(request) {
   let supabaseResponse = NextResponse.next({
     request,
   });

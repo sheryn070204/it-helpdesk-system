@@ -49,7 +49,7 @@ export default function LoginPage() {
 
       if (profile?.role === "admin") {
         router.push("/admin");
-      } else if (profile?.role === "it_staff" || profile?.role === "it-staff") {
+      } else if (profile?.role === "it_staff") {
         router.push("/it-staff");
       } else {
         router.push("/employee");

@@ -66,7 +66,7 @@ export default function ITStaffProfilePage() {
       setProfile({ ...profile, avatar_url: publicUrl })
       toast.success("Profile picture updated!")
     } catch (err) {
-      toast.error("Failed to upload. Try again.")
+      toast.error(err.message || "Failed to upload. Try again.")
     } finally {
       setUploading(false)
     }

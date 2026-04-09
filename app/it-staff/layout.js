@@ -29,7 +29,7 @@ export default async function ITStaffLayout({ children }) {
     .eq("id", user.id)
     .single();
 
-  if (!profile || (profile.role !== "it_staff" && profile.role !== "it-staff" && profile.role !== "admin")) {
+  if (!profile || (profile.role !== "it_staff" && profile.role !== "admin")) {
     redirect("/employee");
   }
 
@@ -101,7 +101,7 @@ export default async function ITStaffLayout({ children }) {
            </div>
           
           <div className="flex items-center gap-6">
-            <NotificationBell role="it-staff" theme="dark" />
+            <NotificationBell role="it_staff" theme="dark" />
           </div>
         </header>
 

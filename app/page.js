@@ -21,18 +21,28 @@ export default async function RootPage() {
   }
 
   // Fetch the user's profile to determine their role
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
 
+  if (profileError) {
+    console.error("Critical: Could not resolve user role.", profileError);
+    // Optional: redirect to an error page or show a specific message
+    // return <div>Authentication Error. Please try again later.</div>
+  }
+
   // Send to the correct portal based on role
   if (profile?.role === "admin") {
     redirect("/admin");
-  } else if (profile?.role === "it_staff" || profile?.role === "it-staff") {
+  } else if (profile?.role === "it_staff") {
     redirect("/it-staff");
-  } else {
+  } else if (profile?.role === "employee") {
     redirect("/employee");
+  } else {
+    // If no role found, default to login
+    console.warn("User has no role assigned:", user.id);
+    redirect("/login");
   }
 }

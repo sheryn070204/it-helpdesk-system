@@ -72,7 +72,7 @@ export default function TicketDetailPage({ params }) {
     const { data: staffData, error: staffError } = await supabase
       .from("profiles")
       .select("*")
-      .in("role", ["it_staff", "it-staff"])
+      .eq("role", "it_staff")
       .order("full_name", { ascending: true });
       
     if (staffError) {

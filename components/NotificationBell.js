@@ -82,7 +82,7 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     let route = "/employee/tickets"; 
     if (role === "admin") {
       route = `/admin/tickets/${notif.ticket_id}`;
-    } else if (role === "it_staff" || role === "it-staff") {
+    } else if (role === "it_staff") {
       route = `/it-staff/tickets/${notif.ticket_id}`;
     }
     router.push(route);

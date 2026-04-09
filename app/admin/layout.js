@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation"; 
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabaseServer"; 
+import { createClient } from "@/lib/supabaseServer";
 import NotificationBell from "@/components/NotificationBell";
 import AdminNav from "@/components/AdminNav";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -16,33 +16,39 @@ export default async function AdminLayout({ children }) {
   const supabase = await createClient();
 
   // 1. Auth Guard
-  const {
+  const { //Check who log in 
     data: { user },
-  } = await supabase.auth.getUser(); 
+  } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login"); 
+  if (!user) { //check if there is a  user 
+    redirect("/login"); //if no, back to log in page
   }
 
   // 2. Role Guard
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase //check role of user
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "admin") { 
-    if (profile?.role === "it_staff" || profile.role === "it-staff") {
-      redirect("/it-staff"); 
-    }
-    redirect("/employee"); 
+  if (profileError) {
+    console.error("Layout: Profile query failed.", profileError);
   }
 
-  async function handleSignOut() {  
+  // Handle unauthorized access or missing profile
+  if (!profile || (profile.role !== "admin" && profile.role !== "it_staff")) { 
+    if (profile?.role === "employee") {
+       redirect("/employee");
+    }
+    // If we can't find a valid role, fallback to login
+    redirect("/login");
+  }
+
+  async function handleSignOut() {
     "use server";
     const supabase = await createClient();
     await supabase.auth.signOut();
-    redirect("/login");  
+    redirect("/login");
   }
 
   return (
@@ -70,9 +76,9 @@ export default async function AdminLayout({ children }) {
         {/* User Info + Log Out */}
         <div className="p-3 border-t border-slate-800">
           <div className="flex items-center gap-3 px-2 mb-2">
-            <UserAvatar 
-              avatarUrl={profile.avatar_url} 
-              fullName={profile.full_name} 
+            <UserAvatar
+              avatarUrl={profile.avatar_url}
+              fullName={profile.full_name}
               size="sm"
               className="border border-slate-700"
             />
