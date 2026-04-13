@@ -1,19 +1,17 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
 import NotificationBell from "@/components/NotificationBell";
 import ITStaffNav from "@/components/ITStaffNav";
-import { UserAvatar } from "@/components/UserAvatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
-  Wrench, 
+  Monitor, 
   LogOut
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default async function ITStaffLayout({ children }) {
   const supabase = await createClient();
 
-  // 1. Auth Guard
+  // 1. Auth Guard - Use getUser for server-side security as recommended
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -40,76 +38,80 @@ export default async function ITStaffLayout({ children }) {
     redirect("/login");
   }
 
+  const getInitials = (name) => {
+    if (!name) return "?";
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <div className="min-h-screen flex bg-[#09090b] text-slate-200">
+    <div className="min-h-screen flex bg-slate-100">
+      
       {/* ─── SIDEBAR ─── */}
-      <aside className="w-56 flex-shrink-0 bg-[#09090b] border-r border-white/5 flex flex-col min-h-screen sticky top-0">
+      <aside className="w-64 min-h-screen bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 sticky top-0">
+        
         {/* Brand Header */}
-        <div className="h-16 px-6 flex items-center border-b border-white/5">
-          <Link href="/it-staff" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Wrench className="w-4 h-4 text-white" />
+        <div className="px-5 py-5 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-600/20">
+              <Monitor className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <p className="text-white font-bold text-sm tracking-tight leading-none mb-0.5">HelpDesk</p>
-              <p className="text-indigo-400 text-[9px] uppercase font-bold tracking-widest leading-none">IT Staff</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-white">HelpDesk</h1>
+              <p className="text-xs text-slate-500 font-medium">IT Staff</p>
             </div>
-          </Link>
+          </div>
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 py-4">
+        <div className="flex-1 py-6">
+          <p className="px-6 mb-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Menu
+          </p>
           <ITStaffNav />
         </div>
 
-        {/* User Info + Log Out */}
-        <div className="p-3 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-2 mb-2">
-            <UserAvatar 
-              avatarUrl={profile.avatar_url} 
-              fullName={profile.full_name} 
-              size="sm"
-              className="border border-slate-700"
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-200 truncate leading-none mb-1">{profile.full_name}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Support Staff</p>
+        {/* Bottom User Card */}
+        <div className="px-3 py-3 border-t border-slate-800">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-800 transition cursor-pointer group">
+            <Avatar className="h-9 w-9 flex-shrink-0">
+              <AvatarImage src={profile?.avatar_url} />
+              <AvatarFallback className="bg-blue-600 text-white text-sm font-bold">
+                {getInitials(profile?.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">
+                {profile?.full_name || user?.email}
+              </p>
+              <p className="text-xs text-slate-500">
+                IT Staff
+              </p>
             </div>
+            <form action={handleSignOut}>
+              <button type="submit" className="flex items-center justify-center p-1">
+                <LogOut className="h-4 w-4 text-slate-600 group-hover:text-slate-400 transition" />
+              </button>
+            </form>
           </div>
-          <form action={handleSignOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              className="w-full flex items-center justify-start gap-2 h-9 px-2 text-slate-400 hover:text-red-400 hover:bg-red-950/20 transition-colors group"
-            >
-              <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-400 transition-colors" />
-              <span className="text-xs font-medium">Log out</span>
-            </Button>
-          </form>
         </div>
       </aside>
 
       {/* ─── MAIN CONTENT AREA ─── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#09090b]">
+      <div className="flex-1 flex flex-col min-w-0">
+        
         {/* Top Header */}
-        <header className="h-16 bg-[#09090b] border-b border-slate-800 px-8 flex items-center justify-between sticky top-0 z-40">
-           <div className="flex items-center gap-3">
-             <div className="w-1 h-5 bg-indigo-500 rounded-full" />
-             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
-               IT Support Dashboard
-             </div>
-           </div>
-          
-          <div className="flex items-center gap-6">
-            <NotificationBell role="it_staff" theme="dark" />
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm flex-shrink-0">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            IT Support Dashboard
+          </p>
+          <div className="flex items-center gap-2">
+            <NotificationBell role="it_staff" theme="light" />
           </div>
         </header>
 
         {/* Viewport */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-          <div className="max-w-[1400px] mx-auto">
-            {children}
-          </div>
+        <main className="flex-1 overflow-y-auto">
+          {children}
         </main>
       </div>
     </div>

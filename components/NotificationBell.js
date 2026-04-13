@@ -20,14 +20,17 @@ export default function NotificationBell({ role = "employee", theme = "light" })
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (user && isMounted) {
         setUserId(user.id);
         fetchNotifications(user.id);
       }
     };
     init();
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
@@ -111,15 +114,15 @@ export default function NotificationBell({ role = "employee", theme = "light" })
         <Button
           variant="ghost"
           size="icon"
-          className={`relative w-11 h-11 rounded-xl transition-all duration-200 ${
+          className={`relative h-10 w-10 rounded-xl transition-all duration-200 ${
             isDark ? 'hover:bg-white/10' : 'hover:bg-slate-100'
           }`}
         >
-          <Bell className={`w-6 h-6 transition-colors ${
-            isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+          <Bell className={`h-6 w-6 transition-colors ${
+            isDark ? 'text-slate-300 hover:text-white' : 'text-slate-500 hover:text-slate-900'
           }`} />
           {unreadCount > 0 && (
-            <div className={`absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 ${
+            <div className={`absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 ${
               isDark ? (role === 'admin' ? 'border-[#1A1F2E]' : 'border-[#1E2430]') : 'border-white'
             }`}>
               {unreadCount > 9 ? "9+" : unreadCount}

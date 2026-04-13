@@ -1,203 +1,346 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { 
-  Mail, 
-  Lock, 
-  Loader2, 
-  LifeBuoy, 
-  ShieldCheck, 
-  ArrowRight,
-  Sparkles,
-  Fingerprint
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Loader2,
+  MonitorCheck,
+  Headphones,
+  Bell,
+  CheckCircle,
+} from 'lucide-react'
+import { toast } from "sonner"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const router = useRouter()
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setError(null)
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      toast.error(error.message);
-      setLoading(false);
-    } else {
-      toast.success("Identity verified. Accessing Hub...");
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
-
-      if (profile?.role === "admin") {
-        router.push("/admin");
-      } else if (profile?.role === "it_staff") {
-        router.push("/it-staff");
-      } else {
-        router.push("/employee");
-      }
-      router.refresh();
+    // Simple validation with plain language
+    if (!email.trim()) {
+      setError('Please enter your email address.')
+      return
     }
-  };
+    if (!password.trim()) {
+      setError('Please enter your password.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      // Sign in
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      })
+
+      if (authError) throw authError
+
+      // Get role from profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError) throw profileError
+
+      toast.success("Welcome back!")
+
+      // Redirect based on role
+      const role = profile?.role
+      if (role === 'admin') {
+        router.push('/admin')
+      } else if (role === 'it_staff') {
+        router.push('/it-staff')
+      } else {
+        router.push('/employee')
+      }
+      router.refresh()
+
+    } catch (err) {
+      // Plain language error messages
+      console.error('Login error:', err)
+      
+      if (
+        err.message?.toLowerCase().includes('invalid login') ||
+        err.message?.toLowerCase().includes('invalid_grant') ||
+        err.message?.toLowerCase().includes('credentials')
+      ) {
+        setError('Wrong email or password. Please try again.')
+      } else if (
+        err.message?.toLowerCase().includes('email not confirmed')
+      ) {
+        setError('Please check your email and confirm your account first.')
+      } else if (
+        err.message?.toLowerCase().includes('too many requests')
+      ) {
+        setError('Too many attempts. Please wait a few minutes and try again.')
+      } else {
+        setError('Something went wrong. Please try again or contact IT support.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Features shown on left panel
+  const features = [
+    {
+      icon: MonitorCheck,
+      title: 'Submit IT Requests',
+      desc: 'Report any computer or software issue easily',
+    },
+    {
+      icon: Bell,
+      title: 'Get Notified',
+      desc: 'Know when your request is being worked on',
+    },
+    {
+      icon: Headphones,
+      title: 'Fast IT Support',
+      desc: 'Our IT team will get back to you quickly',
+    },
+    {
+      icon: CheckCircle,
+      title: 'Track Progress',
+      desc: 'See the status of all your requests',
+    },
+  ]
 
   return (
-    <div className="min-h-screen flex bg-[#09090b] text-slate-100 selection:bg-indigo-500/30 overflow-hidden relative">
-      
-      {/* ─── BACKGROUND ACCENTS ─── */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-900/10 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+    <main className="min-h-screen w-full flex flex-col lg:flex-row bg-white selection:bg-blue-100">
 
-      {/* ─── LEFT PANEL: VISUAL ─── */}
-      <div className="hidden lg:flex flex-1 flex-col justify-between p-20 relative z-10 border-r border-white/5">
-         <div className="flex items-center gap-4 group">
-            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-600/20 group-hover:rotate-12 transition-transform duration-500">
-               <LifeBuoy className="w-7 h-7 text-white" />
+      {/* ================================ */}
+      {/* LEFT — Branding Panel            */}
+      {/* ================================ */}
+      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-16 relative overflow-hidden">
+
+        {/* Decorative background glow */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[80px] pointer-events-none -translate-x-1/4 translate-y-1/4" />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/30">
+              <MonitorCheck className="h-6 w-6 text-white" />
             </div>
             <div>
-               <p className="text-2xl font-black tracking-tighter leading-none mb-1 text-white">Helpdesk</p>
-               <p className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.4em] leading-none">Security Node</p>
+              <h1 className="text-2xl font-bold text-white tracking-tight">
+                IT Helpdesk
+              </h1>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                Support System
+              </p>
             </div>
-         </div>
+          </div>
+        </div>
 
-         <div className="space-y-10 group">
-            <div className="space-y-1.5 overflow-hidden">
-               <div className="flex items-center gap-3 text-indigo-500/60 mb-2">
-                  <Sparkles className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em]">Next-Generation Support</span>
-               </div>
-               <h1 className="text-[120px] font-black leading-[0.8] tracking-tighter text-white opacity-90 group-hover:opacity-100 transition-all duration-700 select-none uppercase">
-                  Secure <br /> <span className="text-indigo-600">Intake</span>
-               </h1>
+        {/* Main headline */}
+        <div className="relative z-10 space-y-12">
+          <div className="space-y-6">
+
+            {/* Online status pill */}
+            <div className="inline-flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-full px-4 py-2">
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
+              <span className="text-sm text-slate-300 font-semibold tracking-wide">
+                Support is available
+              </span>
             </div>
-            <p className="text-xl text-slate-400 font-medium max-w-lg leading-relaxed border-l-4 border-indigo-600 pl-8 group-hover:pl-10 transition-all">
-               Access the global IT support infrastructure. Manage incidents with sub-millisecond encryption and role-based operational oversight.
+
+            {/* Headline */}
+            <h2 className="text-5xl font-bold text-white leading-[1.1] tracking-tight">
+              We're here to<br />
+              <span className="text-blue-400">help you.</span>
+            </h2>
+
+            {/* Subtext — simple language */}
+            <p className="text-slate-400 text-xl leading-relaxed max-w-md">
+              Having a problem with your computer or software? Sign in and let us know. We'll take care of it.
             </p>
-         </div>
+          </div>
 
-         <div className="flex items-center gap-10 opacity-30 group-hover:opacity-60 transition-opacity">
-            <div className="flex items-center gap-3">
-               <ShieldCheck className="w-4 h-4 text-indigo-500" />
-               <span className="text-[10px] font-black uppercase tracking-[0.3em]">End-to-End Secure</span>
-            </div>
-            <div className="flex items-center gap-3">
-               <Fingerprint className="w-4 h-4 text-indigo-500" />
-               <span className="text-[10px] font-black uppercase tracking-[0.3em]">Encrypted Node</span>
-            </div>
-         </div>
+          {/* Feature grid */}
+          <div className="grid grid-cols-2 gap-4 max-w-lg">
+            {features.map((f, i) => (
+              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3 backdrop-blur-md hover:bg-white/10 transition-colors group">
+                <div className="h-10 w-10 rounded-xl bg-blue-600/20 border border-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <f.icon className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-white">
+                    {f.title}
+                  </p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {f.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom */}
+        <div className="relative z-10 pt-8 border-t border-white/5">
+          <p className="text-slate-500 text-sm font-medium">
+            © {new Date().getFullYear()} IT Helpdesk System
+          </p>
+        </div>
       </div>
 
-      {/* ─── RIGHT PANEL: FORM ─── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-20 relative z-10">
-         
-         <div className="w-full max-w-[480px]">
-            <Card className="bg-white/[0.03] backdrop-blur-3xl border border-white/5 rounded-[40px] shadow-2xl overflow-hidden">
-               <CardContent className="p-10 sm:p-14">
-                  
-                  <div className="text-center mb-12">
-                     <div className="lg:hidden flex justify-center mb-8">
-                        <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl">
-                           <LifeBuoy className="w-8 h-8 text-white" />
-                        </div>
-                     </div>
-                     <h2 className="text-3xl font-black text-white tracking-tight leading-none mb-4">Command Login</h2>
-                     <p className="text-slate-500 font-medium">Verify your authorized personnel credentials.</p>
+      {/* ================================ */}
+      {/* RIGHT — Login Form               */}
+      {/* ================================ */}
+      <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12 lg:px-20 relative">
+        
+        {/* Subtle pattern background for the right side */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+
+        {/* Mobile logo */}
+        <div className="flex lg:hidden items-center gap-3 mb-12">
+          <div className="h-10 w-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+            <MonitorCheck className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-2xl font-bold text-slate-900 tracking-tight">
+            IT Helpdesk
+          </span>
+        </div>
+
+        <div className="w-full max-w-md space-y-10 relative z-10">
+
+          {/* Heading — simple and warm */}
+          <div className="space-y-3">
+            <h2 className="text-4xl font-bold text-slate-900 tracking-tight">
+              Welcome back
+            </h2>
+            <p className="text-lg text-slate-500">
+              Sign in to your account
+            </p>
+          </div>
+
+          {/* Form card */}
+          <Card className="border-slate-200 shadow-xl shadow-slate-200/50 rounded-[2rem] bg-white overflow-hidden border">
+            <CardContent className="p-10">
+              <form onSubmit={handleLogin} className="space-y-6">
+
+                {/* Email field */}
+                <div className="space-y-2.5">
+                  <Label htmlFor="email" className="text-sm font-bold text-slate-700 ml-1">
+                    Email Address
+                  </Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@company.com"
+                      className="h-14 pl-12 text-base border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 rounded-2xl transition-all font-medium placeholder:text-slate-400"
+                      disabled={loading}
+                      autoComplete="email"
+                    />
                   </div>
+                </div>
 
-                  <form onSubmit={handleLogin} className="space-y-8">
-                     
-                     <div className="space-y-4">
-                        <Label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">AUTHORIZED EMAIL</Label>
-                        <div className="relative group">
-                           <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
-                           <Input 
-                              type="email" 
-                              placeholder="support_admin@enterprise.com" 
-                              value={email}
-                              onChange={(e) => setEmail(e.target.value)}
-                              required
-                              className="h-16 pl-16 bg-white/[0.02] border-white/5 rounded-2xl text-white font-bold text-base focus-visible:ring-indigo-500 focus-visible:bg-white/[0.04] transition-all"
-                           />
-                        </div>
-                     </div>
-
-                     <div className="space-y-4">
-                        <div className="flex items-center justify-between px-1">
-                           <Label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">SECURE ACCESS KEY</Label>
-                           <Link href="#" className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:text-indigo-400 transition-colors">Emergency Reset?</Link>
-                        </div>
-                        <div className="relative group">
-                           <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
-                           <Input 
-                              type="password" 
-                              placeholder="••••••••••••" 
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value)}
-                              required
-                              className="h-16 pl-16 bg-white/[0.02] border-white/5 rounded-2xl text-white font-bold text-base focus-visible:ring-indigo-500 focus-visible:bg-white/[0.04] transition-all"
-                           />
-                        </div>
-                     </div>
-
-                     <div className="pt-6">
-                        <Button 
-                           type="submit" 
-                           disabled={loading}
-                           className="w-full h-18 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/20 text-[12px] transition-all active:scale-[0.98] group relative overflow-hidden rounded-[26px] border-none py-6"
-                        >
-                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                           {loading ? (
-                              <><Loader2 className="w-6 h-6 mr-4 animate-spin" /> VERIFYING IDENTITY...</>
-                           ) : (
-                              <><ShieldCheck className="w-6 h-6 mr-4 group-hover:scale-110 transition-transform" /> Access Command Hub</>
-                           )}
-                        </Button>
-                     </div>
-                  </form>
-               </CardContent>
-            </Card>
-
-            <div className="mt-12 text-center space-y-6">
-               <p className="text-slate-500 font-medium">
-                  Unauthorized access is strictly monitored. 
-                  <Link href="/register" className="text-indigo-500 font-black uppercase text-[10px] tracking-[0.2em] ml-4 hover:text-indigo-400 transition-all border-b-2 border-indigo-500/20 pb-0.5">
-                     Request Access
-                     <ArrowRight className="inline-block w-3.5 h-3.5 ml-2" />
-                  </Link>
-               </p>
-               
-               <div className="flex items-center justify-center gap-8 opacity-20">
-                  <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-100">
-                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                     Production Stable
+                {/* Password field */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between px-1">
+                    <Label htmlFor="password" className="text-sm font-bold text-slate-700">
+                      Password
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/forgot-password')}
+                      className="text-sm text-blue-600 hover:text-blue-700 transition font-bold"
+                    >
+                      Forgot password?
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-100">
-                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                     v2.0.4-Modern
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="h-14 pl-12 pr-12 text-base border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 rounded-2xl transition-all font-medium placeholder:text-slate-400"
+                      disabled={loading}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition p-1"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                    </button>
                   </div>
-               </div>
-            </div>
-         </div>
+                </div>
 
+                {/* Error message — plain language */}
+                {error && (
+                  <div className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-2xl px-5 py-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700 font-bold leading-relaxed">
+                      {error}
+                    </p>
+                  </div>
+                )}
+
+                {/* Submit button */}
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-lg shadow-blue-600/10 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed mt-4"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-3">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Signing in...
+                    </span>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Footer — helpful not scary */}
+          <div className="text-center space-y-4">
+            <p className="text-slate-500 font-medium">
+              Having trouble signing in?{' '}
+              <button className="text-blue-600 font-bold hover:underline">
+                Contact your IT administrator
+              </button>
+            </p>
+          </div>
+
+        </div>
       </div>
-
-    </div>
-  );
+    </main>
+  )
 }
