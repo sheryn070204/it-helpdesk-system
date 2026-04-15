@@ -51,8 +51,8 @@ export default async function EmployeeLayout({ children }) {
               <LifeBuoy className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-slate-900 font-bold text-sm tracking-tight leading-none mb-0.5">HelpDesk</p>
-              <p className="text-indigo-600 text-[9px] uppercase font-bold tracking-widest leading-none">Employee</p>
+              <p className="text-slate-900 font-black text-xl tracking-tight leading-none mb-1">HelpDesk</p>
+              <p className="text-indigo-600 text-xs uppercase font-bold tracking-widest leading-none">Employee</p>
             </div>
           </Link>
         </div>
@@ -72,8 +72,8 @@ export default async function EmployeeLayout({ children }) {
               className="border border-slate-200"
             />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate leading-none mb-1">{profile.full_name}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Verified User</p>
+              <p className="text-base font-bold text-slate-900 truncate leading-none mb-1">{profile.full_name}</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Verified User</p>
             </div>
           </div>
           <form action={handleSignOut}>

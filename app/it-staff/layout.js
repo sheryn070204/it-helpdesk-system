@@ -56,8 +56,8 @@ export default async function ITStaffLayout({ children }) {
               <Monitor className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-white">HelpDesk</h1>
-              <p className="text-xs text-slate-500 font-medium">IT Staff</p>
+              <h1 className="text-white font-black text-xl tracking-tight leading-none mb-1">HelpDesk</h1>
+              <p className="text-blue-400 text-xs uppercase font-bold tracking-widest leading-none">IT Staff</p>
             </div>
           </div>
         </div>
@@ -80,10 +80,10 @@ export default async function ITStaffLayout({ children }) {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">
+              <p className="text-base font-bold text-white truncate leading-none mb-1">
                 {profile?.full_name || user?.email}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
                 IT Staff
               </p>
             </div>

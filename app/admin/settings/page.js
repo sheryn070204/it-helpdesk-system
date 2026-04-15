@@ -40,28 +40,6 @@ export default function AdminSettings() {
 
   useEffect(() => {
     fetchUsers();
-
-    // Realtime subscription: auto-update when IT staff profiles change
-    const channel = supabase
-      .channel('it-staff-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: 'role=eq.it_staff',
-        },
-        () => {
-          // Re-fetch the full list whenever any it_staff profile changes
-          fetchUsers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   async function fetchUsers() {
@@ -133,66 +111,73 @@ export default function AdminSettings() {
               Add IT Staff
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-[#18181b] border-white/10 text-white rounded-2xl max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Add IT Staff Member</DialogTitle>
-              <DialogDescription className="text-slate-400">
+          <DialogContent className="bg-[#111113] border-white/5 text-white rounded-[32px] p-8 max-w-[420px] shadow-2xl">
+            <DialogHeader className="mb-2">
+              <DialogTitle className="text-2xl font-black tracking-tight">Add IT Staff</DialogTitle>
+              <DialogDescription className="text-slate-500 font-medium tracking-tight">
                 Create a new IT support account.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleAddStaff} className="space-y-4 py-4">
+            <form onSubmit={handleAddStaff} className="space-y-5" autoComplete="off">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-300">Full Name</Label>
+                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Full Name</Label>
                 <Input 
                   placeholder="e.g. John Doe"
-                  className="bg-[#09090b] border-white/5 h-12 rounded-xl text-white" 
+                  className="bg-[#09090b] border-white/5 h-14 rounded-2xl text-white font-medium focus-visible:ring-indigo-500 shadow-inner px-4" 
                   value={newStaffName}
                   onChange={(e) => setNewStaffName(e.target.value)}
+                  autoComplete="off"
+                  data-lpignore="true"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-300">Email Address</Label>
+                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</Label>
                 <Input 
                   type="email"
                   placeholder="john@example.com"
-                  className="bg-[#09090b] border-white/5 h-12 rounded-xl text-white"
+                  className="bg-[#09090b] border-white/5 h-14 rounded-2xl text-white font-medium focus-visible:ring-indigo-500 shadow-inner px-4"
                   value={newStaffEmail}
                   onChange={(e) => setNewStaffEmail(e.target.value)}
+                  autoComplete="new-email"
+                  data-lpignore="true"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-300">Temporary Password</Label>
+                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Temporary Password</Label>
                 <Input 
                   type="password"
                   placeholder="••••••••"
-                  className="bg-[#09090b] border-white/5 h-12 rounded-xl text-white"
+                  className="bg-[#09090b] border-white/5 h-14 rounded-2xl text-white font-medium focus-visible:ring-indigo-500 shadow-inner px-4"
                   value={newStaffPass}
                   onChange={(e) => setNewStaffPass(e.target.value)}
+                  autoComplete="new-password"
+                  data-lpignore="true"
                   required
                 />
               </div>
-              <p className="text-slate-500 text-xs mt-2 italic">
+              <p className="text-slate-500 text-xs italic ml-1">
                 * They can log in right away at the login page.
               </p>
-              <DialogFooter className="pt-4">
+              
+              <div className="flex gap-3 pt-4">
                 <Button 
                    type="button" 
-                   variant="outline" 
-                   className="border-slate-600 text-slate-300 hover:bg-white/5"
+                   variant="ghost" 
+                   className="flex-1 h-14 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 font-black uppercase tracking-widest text-[10px]"
                    onClick={() => setIsOpening(false)}
                 >
                   Cancel
                 </Button>
                 <Button 
                    type="submit" 
-                   className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                   className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all active:scale-95"
                    disabled={creating}
                 >
-                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                  {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create Account"}
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

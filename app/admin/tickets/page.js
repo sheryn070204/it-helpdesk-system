@@ -82,7 +82,7 @@ export default function AdminTicketsPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-1">
             <Database className="w-4 h-4 text-indigo-500" />
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Master Records</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Support Portal</span>
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">
             {assignedToId ? (
@@ -128,9 +128,9 @@ export default function AdminTicketsPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="bg-[#18181b] border-white/10 text-white rounded-xl">
-                <SelectItem value="all">All States</SelectItem>
+                <SelectItem value="all">All Tickets</SelectItem>
                 <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">Working</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
               </SelectContent>
             </Select>
@@ -140,7 +140,7 @@ export default function AdminTicketsPage() {
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent className="bg-[#18181b] border-white/10 text-white rounded-xl">
-                <SelectItem value="all">All Ranks</SelectItem>
+                <SelectItem value="all">All Priorities</SelectItem>
                 <SelectItem value="critical">Critical</SelectItem>
                 <SelectItem value="high">High</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>

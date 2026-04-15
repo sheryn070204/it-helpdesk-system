@@ -183,5 +183,32 @@ graph TD
 
 ---
 
+## 🗄️ 12. CRUD Locations (Where Data Operations Happen)
+To make finding the code easier, here is exactly where the C.R.U.D (Create, Read, Update, Delete) operations live within the Next.js `app/` folder constraints:
+
+### 🎫 Tickets (`tickets` table)
+*   **Create**: `app/employee/submit/page.js` - Where employees write and submit new IT problems.
+    *   *Sample Code*: `await supabase.from('tickets').insert([{ title, description, category, priority, status: 'open', submitted_by: user.id }])`
+*   **Read (List)**: 
+    *   `app/admin/tickets/page.js` - Admins see all tickets globally.
+        *   *Sample Code*: `await supabase.from('tickets').select('*, profiles:submitted_by(full_name)')`
+    *   `app/it-staff/page.js` & `app/it-staff/tickets/page.js` - IT Staff see tickets assigned to them.
+    *   `app/employee/page.js` - Employees see their own history.
+*   **Read (Details)**: `app/admin/tickets/[id]/page.js` & `app/it-staff/tickets/[id]/page.js` - Viewing the exact ticket manifest.
+    *   *Sample Code*: `await supabase.from('tickets').select('*').eq('id', params.id).single()`
+*   **Update**: `app/admin/tickets/[id]/page.js` & `app/it-staff/tickets/[id]/page.js` - Changing ticket statuses (Open -> In Progress -> Resolved) or assigning staff.
+    *   *Sample Code*: `await supabase.from('tickets').update({ status: newStatus }).eq('id', ticketId)`
+*   **Delete**: Not currently exposed to users (Hard deletes are avoided to maintain accurate history).
+
+### 👤 User Profiles (`profiles` table)
+*   **Create**: `app/admin/settings/page.js` - Admins create new IT Staff accounts directly from the dialog window.
+    *   *Sample Code*: `await supabase.auth.signUp({ email, password, options: { data: { full_name, role: 'it_staff' } } })`
+*   **Read**: `app/admin/settings/page.js` - Fetches the list of all IT Staff to manage.
+    *   *Sample Code*: `await supabase.from('profiles').select('*').eq('role', 'it_staff')`
+*   **Update**: `app/admin/profile/page.js`, `app/employee/profile/page.js`, `app/it-staff/profile/page.js` - Where users change their full names and upload new avatar images.
+    *   *Sample Code*: `await supabase.from('profiles').update({ full_name: newName }).eq('id', user.id)`
+
+---
+
 > [!NOTE]
 > This document is a living guide. Whenever you add a major feature or change the database schema, please update the corresponding section here.

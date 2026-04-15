@@ -62,8 +62,8 @@ export default async function AdminLayout({ children }) {
               <Terminal className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm tracking-tight leading-none mb-0.5">HelpDesk</p>
-              <p className="text-indigo-400 text-[9px] uppercase font-bold tracking-widest leading-none">Admin</p>
+              <p className="text-white font-black text-xl tracking-tight leading-none mb-1">HelpDesk</p>
+              <p className="text-indigo-400 text-xs uppercase font-bold tracking-widest leading-none">Admin</p>
             </div>
           </Link>
         </div>
@@ -83,8 +83,8 @@ export default async function AdminLayout({ children }) {
               className="border border-slate-700"
             />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-200 truncate leading-none mb-1">{profile.full_name}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Administrator</p>
+              <p className="text-base font-bold text-slate-200 truncate leading-none mb-1">{profile.full_name}</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Administrator</p>
             </div>
           </div>
           <form action={handleSignOut}>

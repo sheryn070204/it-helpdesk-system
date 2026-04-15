@@ -33,21 +33,9 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault()
     setError(null)
-
-    // Simple validation with plain language
-    if (!email.trim()) {
-      setError('Please enter your email address.')
-      return
-    }
-    if (!password.trim()) {
-      setError('Please enter your password.')
-      return
-    }
-
     setLoading(true)
 
     try {
-      // Sign in
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: password.trim(),
@@ -55,7 +43,7 @@ export default function LoginPage() {
 
       if (authError) throw authError
 
-      // Get role from profiles
+      // Get role
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
@@ -64,39 +52,33 @@ export default function LoginPage() {
 
       if (profileError) throw profileError
 
-      toast.success("Welcome back!")
-
-      // Redirect based on role
-      const role = profile?.role
-      if (role === 'admin') {
+      // Redirect by role
+      if (profile?.role === 'admin') {
         router.push('/admin')
-      } else if (role === 'it_staff') {
+      } else if (profile?.role === 'it_staff') {
         router.push('/it-staff')
-      } else {
+      } else if (profile?.role === 'employee') {
         router.push('/employee')
+      } else {
+        setError('Your account role is not set up. Please contact your IT administrator.')
       }
-      router.refresh()
 
     } catch (err) {
-      // Plain language error messages
-      console.error('Login error:', err)
-      
+      // Show plain language to user
       if (
-        err.message?.toLowerCase().includes('invalid login') ||
-        err.message?.toLowerCase().includes('invalid_grant') ||
-        err.message?.toLowerCase().includes('credentials')
+        err.message?.includes('Invalid login') ||
+        err.message?.includes('invalid_grant') ||
+        err.message?.includes('Invalid credentials')
       ) {
-        setError('Wrong email or password. Please try again.')
-      } else if (
-        err.message?.toLowerCase().includes('email not confirmed')
-      ) {
-        setError('Please check your email and confirm your account first.')
-      } else if (
-        err.message?.toLowerCase().includes('too many requests')
-      ) {
+        setError('Wrong email or password. Please check and try again.')
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Your account needs to be confirmed. Please contact your IT administrator.')
+      } else if (err.message?.includes('User not found')) {
+        setError('No account found with that email. Please check your email address.')
+      } else if (err.message?.includes('Too many requests') || err.status === 429) {
         setError('Too many attempts. Please wait a few minutes and try again.')
       } else {
-        setError('Something went wrong. Please try again or contact IT support.')
+        setError('Could not sign in. Please try again or contact IT support.')
       }
     } finally {
       setLoading(false)

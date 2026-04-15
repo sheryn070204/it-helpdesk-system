@@ -188,7 +188,7 @@ export default function TicketDetailPage({ params }) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
         <Loader2 className="animate-spin h-10 w-10 text-indigo-500 mb-6" />
-        <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.4em]">Analyzing Record...</p>
+        <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.4em]">Loading ticket details...</p>
       </div>
     );
   }
@@ -200,11 +200,11 @@ export default function TicketDetailPage({ params }) {
           <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mb-6 border border-red-500/20">
             <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
-          <h3 className="text-white font-black text-2xl mb-2 tracking-tight">Access Prohibited</h3>
+          <h3 className="text-white font-black text-2xl mb-2 tracking-tight">Notice</h3>
           <p className="text-red-400/70 text-sm mb-8 font-medium">{error}</p>
           <Link href="/admin/tickets">
             <Button variant="outline" className="border-red-900 bg-[#09090b] text-red-400 hover:text-white hover:bg-red-900 transition-all px-8 h-12 rounded-2xl">
-              Return to Control Center
+              Back to Tickets
             </Button>
           </Link>
         </CardContent>
@@ -219,13 +219,13 @@ export default function TicketDetailPage({ params }) {
         <Link href="/admin/tickets">
           <Button variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/5 font-black text-[10px] uppercase tracking-widest px-4 h-10 rounded-xl group">
             <ChevronLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
-            Back to Registry
+            Back to Tickets
           </Button>
         </Link>
         
         <div className="flex items-center gap-3">
            <Badge variant="outline" className="bg-[#111113] border-white/5 text-slate-500 font-mono text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-xl">
-             REF: {ticket.id.slice(0, 12)}
+             Ticket Ref: {ticket.id.slice(0, 12)}
            </Badge>
            <Button variant="ghost" size="icon" onClick={copyToClipboard} className="text-slate-600 hover:text-indigo-400 rounded-xl">
              <Copy className="w-4 h-4" />
@@ -264,8 +264,8 @@ export default function TicketDetailPage({ params }) {
                     className="ring-4 ring-white/5"
                   />
                   <div>
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Requester Identity</p>
-                    <p className="text-lg font-black text-white tracking-tight">{ticket.submitter?.full_name || "Unknown Entity"}</p>
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Submitted By</p>
+                    <p className="text-lg font-black text-white tracking-tight">{ticket.submitter?.full_name || "Unknown User"}</p>
                   </div>
                 </div>
                 
@@ -274,8 +274,8 @@ export default function TicketDetailPage({ params }) {
                     <Hash className="w-8 h-8 opacity-50" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">System Handle</p>
-                    <p className="text-lg font-black text-slate-300 font-mono tracking-tighter">TIC-{ticket.id.slice(0, 8).toUpperCase()}</p>
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Ticket ID</p>
+                    <p className="text-lg font-black text-slate-300 font-mono tracking-tighter">{ticket.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                 </div>
               </div>
@@ -283,7 +283,7 @@ export default function TicketDetailPage({ params }) {
               <div className="space-y-4">
                 <Label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3 ml-1">
                   <MessageSquare className="w-4 h-4 text-indigo-500" />
-                  Incident Manifest
+                  Description
                 </Label>
                 <div className="bg-[#09090b] border border-white/5 p-8 rounded-[24px] shadow-inner text-slate-300 text-lg leading-relaxed whitespace-pre-wrap font-medium border-l-4 border-l-indigo-600/50">
                   {ticket.description}
@@ -298,7 +298,7 @@ export default function TicketDetailPage({ params }) {
                  <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-400">
                     <History className="w-5 h-5" />
                  </div>
-                 <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Transaction Log</CardTitle>
+                 <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Activity Log</CardTitle>
                </div>
             </CardHeader>
             <CardContent className="p-10">
@@ -309,7 +309,7 @@ export default function TicketDetailPage({ params }) {
                     <div className="mt-2 w-5 h-5 rounded-full bg-indigo-600 border-4 border-[#111113] shadow-[0_0_15px_rgba(79,70,229,0.5)] z-10 shrink-0" />
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <p className="text-base font-black text-white tracking-tight">Core Incident Initialized</p>
+                        <p className="text-base font-black text-white tracking-tight">Ticket created</p>
                         <span className="text-[10px] font-bold text-slate-600 font-mono uppercase tracking-widest bg-white/5 px-3 py-1 rounded-lg border border-white/5">
                           {new Date(ticket.created_at).toLocaleString()}
                         </span>
@@ -330,13 +330,13 @@ export default function TicketDetailPage({ params }) {
                 <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
                   <Settings className="w-5 h-5 rotate-90" />
                 </div>
-                <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Triage Console</CardTitle>
+                <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Ticket Actions</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-10">
               
                <div className="space-y-4">
-                 <Label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Lifecycle State</Label>
+                 <Label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Update Status</Label>
                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                    <SelectTrigger className="w-full h-16 bg-[#09090b] text-white border-white/5 rounded-2xl font-black text-sm uppercase tracking-widest focus:ring-0 focus:border-indigo-500 transition-all shadow-inner">
                      <SelectValue placeholder="STATUS" />
@@ -345,19 +345,19 @@ export default function TicketDetailPage({ params }) {
                      <SelectItem className="rounded-xl py-4 focus:bg-indigo-600" value="open">
                        <div className="flex items-center gap-3">
                           <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                          <span className="font-black tracking-widest uppercase text-xs">Awaiting Triage</span>
+                          <span className="font-black tracking-widest uppercase text-xs">Open</span>
                        </div>
                      </SelectItem>
                      <SelectItem className="rounded-xl py-4 focus:bg-indigo-600" value="in_progress">
                        <div className="flex items-center gap-3">
                           <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-                          <span className="font-black tracking-widest uppercase text-xs">Engineer Active</span>
+                          <span className="font-black tracking-widest uppercase text-xs">In Progress</span>
                        </div>
                      </SelectItem>
                      <SelectItem className="rounded-xl py-4 focus:bg-indigo-600" value="resolved">
                        <div className="flex items-center gap-3">
                           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                          <span className="font-black tracking-widest uppercase text-xs">Terminated / Fixed</span>
+                          <span className="font-black tracking-widest uppercase text-xs">Resolved</span>
                        </div>
                      </SelectItem>
                    </SelectContent>
@@ -367,13 +367,13 @@ export default function TicketDetailPage({ params }) {
               <Separator className="bg-white/5" />
 
               <div className="space-y-4">
-                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Staff Access</Label>
+                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Assigned To</Label>
                 <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
                   <SelectTrigger className="w-full h-16 bg-[#09090b] text-white border-white/5 rounded-2xl font-black text-sm uppercase tracking-widest focus:ring-0 focus:border-indigo-500 transition-all shadow-inner">
                     <SelectValue placeholder="UNASSIGNED" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1E2538] border-white/10 text-white rounded-2xl p-2">
-                    <SelectItem className="rounded-xl py-4 focus:bg-indigo-600" value="unassigned">— DE-RANK TO QUEUE —</SelectItem>
+                    <SelectItem className="rounded-xl py-4 focus:bg-indigo-600" value="unassigned">Unassigned</SelectItem>
                     {itStaff.map((staff) => (
                       <SelectItem className="rounded-xl py-4 focus:bg-indigo-600" key={staff.id} value={staff.id}>
                         <div className="flex items-center gap-3">
@@ -393,9 +393,9 @@ export default function TicketDetailPage({ params }) {
                     className="ring-4 ring-indigo-500/10"
                   />
                   <div>
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-1">Active Staff</p>
+                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-1">Assigned Staff</p>
                     <p className="text-lg font-black text-white tracking-tight">
-                      {selectedAssignee === "unassigned" ? "Floating Queue" : itStaff.find(s => s.id === selectedAssignee)?.full_name}
+                      {selectedAssignee === "unassigned" ? "Unassigned" : itStaff.find(s => s.id === selectedAssignee)?.full_name}
                     </p>
                   </div>
                 </div>
@@ -409,9 +409,9 @@ export default function TicketDetailPage({ params }) {
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                   {saving ? (
-                    <><Loader2 className="w-5 h-5 mr-3 animate-spin" /> EXECUTING...</>
+                    <><Loader2 className="w-5 h-5 mr-3 animate-spin" /> Saving...</>
                   ) : (
-                    <><Shield className="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform" /> Commit Changes</>
+                    <><Shield className="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform" /> Save Changes</>
                   )}
                 </Button>
               </div>

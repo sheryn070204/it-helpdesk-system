@@ -8,9 +8,9 @@ import { NextResponse } from "next/server";
  * It refreshes the user's auth session on every request so that
  * Server Components (layouts) can reliably read the session via cookies.
  *
- * This MUST be named middleware.js and exported as "middleware".
+ * This MUST be named proxy.js and exported as "proxy" or default.
  */
-export async function middleware(request) {
+export default async function proxy(request) {
   let supabaseResponse = NextResponse.next({
     request,
   });

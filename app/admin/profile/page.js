@@ -11,9 +11,13 @@ import {
   Mail, 
   Lock,
   ChevronLeft,
-  Settings
+  Settings,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,8 +33,15 @@ export default function AdminProfilePage() {
   
   // Form fields
   const [fullName, setFullName] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [updatingPassword, setUpdatingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
   useEffect(() => {
     fetchProfileData()
@@ -92,24 +103,89 @@ export default function AdminProfilePage() {
   }
 
   // UPDATE PASSWORD
-  async function handleUpdatePassword() {
-    if (!newPassword) return toast.error("Please enter a new password.")
-    if (newPassword !== confirmPassword) return toast.error("Passwords do not match.")
-    if (newPassword.length < 6) return toast.error("Password must be at least 6 characters.")
+  const handleUpdatePassword = async () => {
+    setPasswordError(null)
+    setPasswordSuccess(false)
 
-    setUpdating(true)
-    const { error } = await supabase.auth.updateUser({ 
-      password: newPassword 
-    })
-
-    if (error) {
-      toast.error(error.message)
-    } else {
-      toast.success("Password updated!")
-      setNewPassword("")
-      setConfirmPassword("")
+    // --- Validation ---
+    if (!currentPassword.trim()) {
+      setPasswordError('Please enter your current password.')
+      return
     }
-    setUpdating(false)
+
+    if (!newPassword.trim()) {
+      setPasswordError('Please enter a new password.')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match. Please check and try again.')
+      return
+    }
+
+    if (newPassword === currentPassword) {
+      setPasswordError('Your new password must be different from your current password.')
+      return
+    }
+
+    setUpdatingPassword(true)
+
+    try {
+      // Step 1: Re-authenticate with current password
+      // This verifies the user knows their current password AND refreshes the session
+      const { error: reAuthError } = await supabase.auth.signInWithPassword({
+        email: user?.email,
+        password: currentPassword.trim(),
+      })
+
+      if (reAuthError) {
+        if (reAuthError.message?.includes('Invalid login')) {
+          setPasswordError('Your current password is incorrect.')
+        } else {
+          setPasswordError('Could not verify your current password. Please try again.')
+        }
+        return
+      }
+
+      // Step 2: Update to new password
+      // NOTE: Supabase's "Secure Password Change" requires the current_password payload
+      // parameter. Omitting this results in a 400 Bad Request if the feature is enabled.
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword.trim(),
+        current_password: currentPassword.trim()
+      })
+
+      if (updateError) {
+        if (updateError.message?.includes('same password') || updateError.message?.includes('different from')) {
+          setPasswordError('New password must be different from your current one.')
+        } else if (updateError.message?.includes('weak') || updateError.message?.includes('short')) {
+          setPasswordError('Password is too weak. Please use at least 6 characters with a mix of letters and numbers.')
+        } else {
+          setPasswordError('Failed to update password. Please try again.')
+        }
+        return
+      }
+
+      // Success
+      setPasswordSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setPasswordSuccess(false), 4000)
+
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Password update error:', err.message)
+      }
+      setPasswordError('Something went wrong. Please try again.')
+    } finally {
+      setUpdatingPassword(false)
+    }
   }
 
   if (loading) {
@@ -211,46 +287,118 @@ export default function AdminProfilePage() {
             </div>
           </Card>
           
-          <Card className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-6 shadow-xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Lock className="w-5 h-5 text-indigo-400" />
+          <Card className="bg-[#1E2538] border border-[#2D3548] rounded-2xl shadow-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                <Lock className="h-5 w-5 text-indigo-400"/>
                 Account Security
-              </h3>
-              <p className="text-slate-400 text-sm mt-1 font-medium">Update your password to stay secure.</p>
-            </div>
-            
-            <div className="space-y-4">
+              </CardTitle>
+              <p className="text-sm text-slate-400 font-medium mt-1">
+                Update your password to stay secure.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-2">
+
+              {/* Current password */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-300 ml-1">Current Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none"/>
+                  <Input
+                    type={showCurrent ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl h-12 pl-12 pr-12 focus:border-indigo-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
+                    {showCurrent ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                  </button>
+                </div>
+              </div>
+
+              {/* New password */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-300 ml-1">New Password</Label>
-                <Input 
-                  type="password" 
-                  className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 6 characters"
-                />
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none"/>
+                  <Input
+                    type={showNew ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl h-12 pl-12 pr-12 focus:border-indigo-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
+                    {showNew ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                  </button>
+                </div>
               </div>
-              
+
+              {/* Confirm new password */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-300 ml-1">Confirm Password</Label>
-                <Input 
-                  type="password" 
-                  className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl px-4 py-3 h-12 focus:border-indigo-500"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat new password"
-                />
+                <Label className="text-sm font-medium text-slate-300 ml-1">Confirm New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none"/>
+                  <Input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat your new password"
+                    className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl h-12 pl-12 pr-12 focus:border-indigo-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
+                    {showConfirm ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                  </button>
+                </div>
+                {/* Password match indicator */}
+                {confirmPassword && (
+                  <p className={`text-sm font-medium flex items-center gap-1.5 mt-2 ml-1 ${newPassword === confirmPassword ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {newPassword === confirmPassword ? (
+                      <><CheckCircle className="h-4 w-4"/> Passwords match</>
+                    ) : (
+                      <><AlertCircle className="h-4 w-4"/> Passwords do not match</>
+                    )}
+                  </p>
+                )}
               </div>
-              
-              <Button 
+
+              {/* Error message */}
+              {passwordError && (
+                <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mt-4">
+                  <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5"/>
+                  <p className="text-sm text-red-200 font-medium leading-relaxed">{passwordError}</p>
+                </div>
+              )}
+
+              {/* Success message */}
+              {passwordSuccess && (
+                <div className="flex items-center gap-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 mt-4">
+                  <CheckCircle className="h-5 w-5 text-emerald-400 flex-shrink-0"/>
+                  <p className="text-sm text-emerald-200 font-medium">Password updated successfully!</p>
+                </div>
+              )}
+
+              {/* Submit button */}
+              <Button
                 onClick={handleUpdatePassword}
-                disabled={updating}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 h-12 rounded-xl transition-all active:scale-95"
-              >
-                {updating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
+                disabled={updatingPassword}
+                className="w-full h-12 mt-6 text-base font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+                {updatingPassword ? (
+                  <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin"/> Updating...</span>
+                ) : 'Update Password'}
               </Button>
-            </div>
+
+            </CardContent>
           </Card>
 
         </div>

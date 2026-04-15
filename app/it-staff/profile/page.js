@@ -11,8 +11,12 @@ import {
   Mail, 
   Lock,
   ChevronLeft,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,8 +35,15 @@ export default function ITStaffProfilePage() {
   
   // Form fields
   const [fullName, setFullName] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [updatingPassword, setUpdatingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
   // useRef to prevent double fetch in React Strict Mode
   const hasFetched = useRef(false)
@@ -128,26 +139,88 @@ export default function ITStaffProfilePage() {
   }
 
   // UPDATE PASSWORD
-  async function handleUpdatePassword() {
-    if (!newPassword) return toast.error("Please enter a new password.")
-    if (newPassword !== confirmPassword) return toast.error("Passwords do not match.")
-    if (newPassword.length < 6) return toast.error("Password must be at least 6 characters.")
+  const handleUpdatePassword = async () => {
+    setPasswordError(null)
+    setPasswordSuccess(false)
 
-    setUpdating(true)
+    // --- Validation ---
+    if (!currentPassword.trim()) {
+      setPasswordError('Please enter your current password.')
+      return
+    }
+
+    if (!newPassword.trim()) {
+      setPasswordError('Please enter a new password.')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match. Please check and try again.')
+      return
+    }
+
+    if (newPassword === currentPassword) {
+      setPasswordError('Your new password must be different from your current password.')
+      return
+    }
+
+    setUpdatingPassword(true)
+
     try {
-      const { error } = await supabase.auth.updateUser({ 
-        password: newPassword 
+      // Step 1: Re-authenticate with current password
+      // This verifies the user knows their current password AND refreshes the session
+      const { error: reAuthError } = await supabase.auth.signInWithPassword({
+        email: user?.email,
+        password: currentPassword.trim(),
       })
 
-      if (error) throw error
+      if (reAuthError) {
+        if (reAuthError.message?.includes('Invalid login')) {
+          setPasswordError('Your current password is incorrect.')
+        } else {
+          setPasswordError('Could not verify your current password. Please try again.')
+        }
+        return
+      }
 
-      toast.success("Password updated!")
-      setNewPassword("")
-      setConfirmPassword("")
+      // Step 2: Update to new password
+      // NOTE: Supabase's "Secure Password Change" requires the current_password payload
+      // parameter. Omitting this results in a 400 Bad Request if the feature is enabled.
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword.trim(),
+        current_password: currentPassword.trim()
+      })
+
+      if (updateError) {
+        if (updateError.message?.includes('same password') || updateError.message?.includes('different from')) {
+          setPasswordError('New password must be different from your current one.')
+        } else if (updateError.message?.includes('weak') || updateError.message?.includes('short')) {
+          setPasswordError('Password is too weak. Please use at least 6 characters with a mix of letters and numbers.')
+        } else {
+          setPasswordError('Failed to update password. Please try again.')
+        }
+        return
+      }
+
+      // Success
+      setPasswordSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => setPasswordSuccess(false), 4000)
+
     } catch (err) {
-      toast.error(err.message || "Failed to update password.")
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Password update error:', err.message)
+      }
+      setPasswordError('Something went wrong. Please try again.')
     } finally {
-      setUpdating(false)
+      setUpdatingPassword(false)
     }
   }
 
@@ -246,26 +319,124 @@ export default function ITStaffProfilePage() {
             </div>
           </Card>
           
-          <Card className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-blue-500" />
-              Account Security
-            </h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-slate-700">New Password</Label>
-                  <Input type="password" placeholder="Min. 6 characters" className="h-11 text-base border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 rounded-xl transition" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-slate-700">Confirm Password</Label>
-                  <Input type="password" placeholder="Repeat password" className="h-11 text-base border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 rounded-xl transition" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          <Card className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Lock className="h-5 w-5 text-slate-600"/>
+                Account Security
+              </CardTitle>
+              <p className="text-sm text-slate-500">
+                Update your password to stay secure.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-2">
+
+              {/* Current password */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-slate-700">
+                  Current Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none"/>
+                  <Input
+                    type={showCurrent ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    className="h-11 pl-11 pr-11 text-base border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    {showCurrent ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                  </button>
                 </div>
               </div>
-              <Button onClick={handleUpdatePassword} disabled={updating} className="w-full h-11 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition">
-                {updating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
+
+              {/* New password */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-slate-700">
+                  New Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none"/>
+                  <Input
+                    type={showNew ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="h-11 pl-11 pr-11 text-base border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew(!showNew)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    {showNew ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm new password */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-slate-700">
+                  Confirm New Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none"/>
+                  <Input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat your new password"
+                    className="h-11 pl-11 pr-11 text-base border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    {showConfirm ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                  </button>
+                </div>
+                {/* Password match indicator */}
+                {confirmPassword && (
+                  <p className={`text-sm font-medium flex items-center gap-1.5 mt-1 ${newPassword === confirmPassword ? 'text-green-600' : 'text-red-500'}`}>
+                    {newPassword === confirmPassword ? (
+                      <><CheckCircle className="h-4 w-4"/> Passwords match</>
+                    ) : (
+                      <><AlertCircle className="h-4 w-4"/> Passwords do not match</>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Error message */}
+              {passwordError && (
+                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mt-4">
+                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5"/>
+                  <p className="text-sm text-red-600 font-medium leading-relaxed">{passwordError}</p>
+                </div>
+              )}
+
+              {/* Success message */}
+              {passwordSuccess && (
+                <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4">
+                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0"/>
+                  <p className="text-sm text-green-700 font-medium">Password updated successfully!</p>
+                </div>
+              )}
+
+              {/* Submit button */}
+              <Button
+                onClick={handleUpdatePassword}
+                disabled={updatingPassword}
+                className="w-full h-11 mt-4 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed">
+                {updatingPassword ? (
+                  <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Updating...</span>
+                ) : 'Update Password'}
               </Button>
-            </div>
+
+            </CardContent>
           </Card>
         </div>
       </div>

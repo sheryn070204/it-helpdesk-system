@@ -56,7 +56,7 @@ export default function StaffTicketDetailPage({ params }) {
         .from("tickets")
         .select(`
           id, title, description, priority, status, created_at, assigned_to, submitted_by,
-          profiles!tickets_submitted_by_fkey (full_name, email, avatar_url),
+          submitter:profiles!tickets_submitted_by_fkey (full_name, avatar_url),
           assignee:profiles!tickets_assigned_to_fkey (full_name, avatar_url)
         `)
         .eq("id", id)
@@ -203,7 +203,7 @@ export default function StaffTicketDetailPage({ params }) {
     );
   }
 
-  const submitterName = ticket?.profiles?.full_name || ticket?.profiles?.email || 'Unknown User';
+  const submitterName = ticket?.submitter?.full_name || 'Unknown User';
   const assignedStaff = ticket?.assignee;
 
   const activityLog = [

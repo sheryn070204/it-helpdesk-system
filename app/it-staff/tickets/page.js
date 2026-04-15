@@ -16,6 +16,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getPriorityBadge, getStatusBadge } from "@/lib/badgeHelpers";
 import { UserAvatar } from "@/components/UserAvatar";
 
 function TicketsContent() {
@@ -75,43 +77,10 @@ function TicketsContent() {
     return matchesSearch && matchesFilter;
   });
 
-  const PriorityBadge = ({ priority }) => {
-    const colors = {
-      low: "bg-slate-100 text-slate-600 border-slate-200",
-      medium: "bg-blue-50 text-blue-700 border-blue-200",
-      high: "bg-orange-50 text-orange-700 border-orange-200",
-      urgent: "bg-red-50 text-red-700 border-red-200",
-      critical: "bg-red-50 text-red-700 border-red-200"
-    };
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${colors[priority?.toLowerCase()] || colors.low}`}>
-        {priority?.charAt(0).toUpperCase() + priority?.slice(1)}
-      </span>
-    );
-  };
 
-  const StatusBadge = ({ status }) => {
-    const configs = {
-      open: "bg-blue-50 text-blue-700 border-blue-200",
-      in_progress: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      resolved: "bg-green-50 text-green-700 border-green-200",
-      closed: "bg-slate-100 text-slate-500 border-slate-200"
-    };
-    const labelMap = {
-      open: "Open",
-      in_progress: "In Progress",
-      resolved: "Resolved",
-      closed: "Closed"
-    };
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${configs[status] || configs.open}`}>
-        {labelMap[status] || status}
-      </span>
-    );
-  };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -167,69 +136,69 @@ function TicketsContent() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-4">Ticket Details</th>
-                    <th className="px-4 py-4 text-center">ID</th>
-                    <th className="px-4 py-4 text-center">Priority</th>
-                    <th className="px-4 py-4 text-center">Status</th>
-                    <th className="px-6 py-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-100 h-14">
+                    <TableHead className="font-bold text-slate-500 text-xs uppercase tracking-wider pl-8 text-left w-[40%]">Ticket Details</TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs tracking-wider text-center w-[15%]">ID</TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs tracking-wider text-center w-[15%]">Priority</TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs tracking-wider text-center w-[15%]">Status</TableHead>
+                    <TableHead className="font-bold text-slate-500 text-xs tracking-wider text-right pr-8 w-[15%]">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-slate-100">
                   {filteredTickets.map((ticket) => (
-                    <tr key={ticket.id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-5">
+                    <TableRow key={ticket.id} className="group hover:bg-slate-50/70 transition-colors h-20 border-none">
+                      <TableCell className="pl-8">
                         <div className="flex items-center gap-4">
                            <UserAvatar 
                              avatarUrl={ticket.submitter?.avatar_url} 
                              fullName={ticket.submitter?.full_name} 
                              size="md"
-                             className="border border-slate-100 shadow-sm"
+                             className="border border-slate-200 shadow-sm"
                            />
-                           <div className="min-w-0">
-                              <h3 className="text-base font-bold text-slate-900 truncate max-w-[300px] mb-1 group-hover:text-blue-600 transition-colors">{ticket.title}</h3>
-                              <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
-                                 <span className="flex items-center gap-1.5">
-                                   <User className="w-3.5 h-3.5 opacity-60" />
+                           <div className="flex flex-col gap-1">
+                              <h3 className="text-sm font-bold text-slate-900 truncate max-w-[300px] leading-tight group-hover:text-blue-600 transition-colors">{ticket.title}</h3>
+                              <div className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                                 <span className="flex items-center gap-1">
+                                   <User className="w-3 h-3 text-slate-400" />
                                    {ticket.submitter?.full_name || 'System'}
                                  </span>
                                  <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                 <span className="flex items-center gap-1.5">
-                                   <Clock className="w-3.5 h-3.5 opacity-60" />
+                                 <span className="flex items-center gap-1">
+                                   <Clock className="w-3 h-3 text-slate-400" />
                                    {new Date(ticket.created_at).toLocaleDateString()}
                                  </span>
                               </div>
                            </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-5 text-center">
-                         <span className="bg-slate-100 border border-slate-200 text-slate-600 font-mono text-[10px] font-bold px-2 py-1 rounded-md">
+                      </TableCell>
+                      <TableCell className="px-4 text-center">
+                         <span className="bg-slate-100 border border-slate-200 text-slate-600 font-mono text-[10px] font-bold px-2.5 py-1 rounded-md">
                            {ticket.id.slice(0, 8).toUpperCase()}
                          </span>
-                      </td>
-                      <td className="px-4 py-5">
+                      </TableCell>
+                      <TableCell className="px-4">
                         <div className="flex justify-center">
-                          <PriorityBadge priority={ticket.priority} />
+                          {getPriorityBadge(ticket.priority)}
                         </div>
-                      </td>
-                      <td className="px-4 py-5">
+                      </TableCell>
+                      <TableCell className="px-4">
                         <div className="flex justify-center">
-                          <StatusBadge status={ticket.status} />
+                          {getStatusBadge(ticket.status)}
                         </div>
-                      </td>
-                      <td className="px-6 py-5 text-right">
+                      </TableCell>
+                      <TableCell className="pr-8 text-right">
                          <Link href={`/it-staff/tickets/${ticket.id}`}>
-                           <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-white hover:border-blue-200 transition-all shadow-sm">
-                              <ChevronRight className="w-5 h-5" />
+                           <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm group-hover:border-blue-200 group-hover:text-blue-500">
+                              <ChevronRight className="w-4 h-4" />
                            </Button>
                          </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

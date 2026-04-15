@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 const PRIORITY_RULES = [
    { keywords: ['urgent', 'emergency', 'asap', 'broken', 'stop', 'expose data'], priority: 'critical' },
    { keywords: ['slow', 'error', 'bug', 'failed', 'cannot access'], priority: 'high' },
-   { keywords: ['help', 'question', 'request'], priority: 'medium' }
+   { keywords: ['help', 'question', 'request', 'change', 'new'], priority: 'medium' }
 ];
 
 function detectPriority(text) {
