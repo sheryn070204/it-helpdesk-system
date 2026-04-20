@@ -17,10 +17,11 @@ import { UserAvatar } from "@/components/UserAvatar";
 export default function AdminTicketsPage() {
   const searchParams = useSearchParams();
   const assignedToId = searchParams.get("assigned_to");
+  const submittedById = searchParams.get("submitted_by");
   
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [assigneeName, setAssigneeName] = useState("");
+  const [filterName, setFilterName] = useState("");
   
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -28,7 +29,7 @@ export default function AdminTicketsPage() {
 
   useEffect(() => {
     fetchTickets();
-  }, [assignedToId]);
+  }, [assignedToId, submittedById]);
 
   async function fetchTickets() {
     setLoading(true);
@@ -36,7 +37,7 @@ export default function AdminTicketsPage() {
       .from("tickets")
       .select(`
         id, title, priority, status, created_at,
-        submitter:profiles!tickets_submitted_by_fkey (full_name, avatar_url),
+        submitter:profiles!tickets_submitted_by_fkey (id, full_name, avatar_url),
         assignee:profiles!tickets_assigned_to_fkey (id, full_name, avatar_url)
       `);
 
@@ -45,13 +46,20 @@ export default function AdminTicketsPage() {
       query = query.eq("assigned_to", assignedToId);
     }
 
+    // Force filter if submitted_by param is present
+    if (submittedById) {
+      query = query.eq("submitted_by", submittedById);
+    }
+
     const { data } = await query.order("created_at", { ascending: false });
 
     if (data) {
       setTickets(data);
-      // If filtering by user, set the display name from the first ticket's assignee
+      // Set display name for header
       if (assignedToId && data.length > 0) {
-        setAssigneeName(data[0].assignee?.full_name || "Selected Staff");
+        setFilterName(data[0].assignee?.full_name || "Selected Staff");
+      } else if (submittedById && data.length > 0) {
+        setFilterName(data[0].submitter?.full_name || "Selected Employee");
       }
     }
     setLoading(false);
@@ -61,8 +69,7 @@ export default function AdminTicketsPage() {
     setSearch("");
     setStatusFilter("all");
     setPriorityFilter("all");
-    if (assignedToId) {
-      // Logic to clear the URL param would typically involve router.push('/admin/tickets')
+    if (assignedToId || submittedById) {
       window.location.href = "/admin/tickets";
     }
   };
@@ -86,7 +93,9 @@ export default function AdminTicketsPage() {
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">
             {assignedToId ? (
-              <>Assigned to <span className="text-indigo-500">{assigneeName}</span></>
+              <>Assigned to <span className="text-indigo-500">{filterName}</span></>
+            ) : submittedById ? (
+              <>Submitted by <span className="text-indigo-500">{filterName}</span></>
             ) : (
               <>All <span className="text-indigo-500">Tickets</span></>
             )}
@@ -94,17 +103,19 @@ export default function AdminTicketsPage() {
           <p className="text-sm text-slate-500 font-medium">
             {assignedToId 
               ? `Showing tickets currently assigned to this staff member.` 
+              : submittedById
+              ? `Showing tickets submitted by this employee.`
               : `Monitoring ${tickets.length} total tickets across the platform.`}
           </p>
         </div>
         
-        {assignedToId && (
+        {(assignedToId || submittedById) && (
           <Button 
             variant="ghost" 
             onClick={() => window.location.href = "/admin/tickets"}
             className="h-12 px-6 rounded-xl border border-white/5 text-slate-400 hover:text-white hover:bg-white/5 text-[10px] font-black uppercase tracking-widest"
           >
-            <X className="w-4 h-4 mr-2" /> Clear Staff Filter
+            <X className="w-4 h-4 mr-2" /> Clear Filter
           </Button>
         )}
       </div>

@@ -12,7 +12,6 @@ export default function EmployeeNav() {
     { name: "Home", href: "/employee", icon: LayoutDashboard },
     { name: "Submit a Request", href: "/employee/submit", icon: Plus },
     { name: "My Requests", href: "/employee/tickets", icon: Ticket },
-    { name: "My Profile", href: "/employee/profile", icon: UserCircle },
   ];
 
   return (
@@ -29,13 +28,13 @@ export default function EmployeeNav() {
           <Link
             key={item.name}
             href={item.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+            className={`flex items-center gap-4 px-3 py-3 rounded-xl text-base font-bold transition-all ${
               isActive
-                ? "bg-indigo-600 text-white shadow-sm"
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
                 : "text-slate-600 hover:text-indigo-600 hover:bg-slate-100"
             }`}
           >
-            <Icon className={`w-4 h-4 ${isActive ? "text-indigo-200" : "text-slate-400"}`} />
+            <Icon className={`w-5 h-5 ${isActive ? "text-indigo-200" : "text-slate-400"}`} />
             {item.name}
           </Link>
         );

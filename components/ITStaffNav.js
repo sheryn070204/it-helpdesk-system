@@ -14,7 +14,6 @@ export default function ITStaffNav() {
   const navItems = [
     { name: "My Tickets", href: "/it-staff", icon: LayoutDashboard },
     { name: "Resolved",   href: "/it-staff/tickets?status=resolved", icon: CheckCircle2 },
-    { name: "My Profile", href: "/it-staff/profile", icon: UserCircle },
   ];
 
   return (
