@@ -1,50 +1,58 @@
+// Import tools from Next.js and our local files
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabaseServer";
-import { UserAvatar } from "@/components/UserAvatar";
-import NotificationBell from "@/components/NotificationBell";
-import EmployeeNav from "@/components/EmployeeNav";
-import MobileHeader from "@/components/MobileHeader";
+import { createClient } from "@/lib/supabaseServer"; // Server-side database tool
+import { UserAvatar } from "@/components/UserAvatar"; // User's profile picture component
+import NotificationBell from "@/components/NotificationBell"; // Alert bell component
+import EmployeeNav from "@/components/EmployeeNav"; // Navigation links for employees
+import MobileHeader from "@/components/MobileHeader"; // Header for phone users
+// Import icons for the dashboard
 import { 
   LifeBuoy, 
   LogOut
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // A nice button component
 
+// This function builds the main layout for every page in the Employee section
 export default async function EmployeeLayout({ children }) {
+  // Connect to the database
   const supabase = await createClient();
 
-  // 1. Auth Guard
+  // 1. Security Check: Make sure the user is actually logged in
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // If NOT logged in, send them back to the login page
   if (!user) {
     redirect("/login");
   }
 
-  // 2. Fetch Profile for Layout
+  // 2. Get the user's name and details from their profile
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
+  // If there is no profile, something is wrong, so send them to login
   if (!profile) {
     redirect("/login");
   }
 
+  // This function runs when the user clicks "Log out"
   async function handleSignOut() {
-    "use server";
+    "use server"; // This tells the computer to run this on the server
     const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/login");
+    await supabase.auth.signOut(); // Log out from Supabase
+    redirect("/login"); // Go back to the login page
   }
 
   return (
+    // The main container for the whole screen
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 text-slate-900">
       
-      {/* Mobile Header & Sidebar */}
+      {/* Show this header only on mobile phones */}
       <MobileHeader 
         profile={profile} 
         role="employee" 
@@ -54,9 +62,9 @@ export default async function EmployeeLayout({ children }) {
         <EmployeeNav />
       </MobileHeader>
 
-      {/* ─── SIDEBAR (Desktop) ─── */}
+      {/* ─── SIDEBAR (This is the menu on the left for big computer screens) ─── */}
       <aside className="hidden lg:flex w-64 flex-shrink-0 bg-white border-r border-slate-200 flex-col min-h-screen sticky top-0">
-        {/* Brand Header */}
+        {/* Brand Name and Logo at the top of the sidebar */}
         <div className="h-16 px-6 flex items-center border-b border-slate-100">
           <Link href="/employee" className="flex items-center gap-3 group">
             <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-all">
@@ -69,12 +77,12 @@ export default async function EmployeeLayout({ children }) {
           </Link>
         </div>
 
-        {/* Navigation */}
+        {/* This part contains the navigation links (Home, My Requests, etc.) */}
         <div className="flex-1 py-6">
           <EmployeeNav />
         </div>
 
-        {/* Log Out at Bottom */}
+        {/* Log Out button at the bottom of the sidebar */}
         <div className="p-4 border-t border-slate-100">
           <form action={handleSignOut}>
             <Button
@@ -89,9 +97,9 @@ export default async function EmployeeLayout({ children }) {
         </div>
       </aside>
 
-      {/* ─── MAIN CONTENT AREA ─── */}
+      {/* ─── MAIN CONTENT AREA (This is where the actual pages are shown) ─── */}
       <div className="flex-1 flex flex-col min-w-0 bg-slate-50">
-        {/* Top Header (Desktop) */}
+        {/* Top Header (Visible only on big computer screens) */}
         <header className="hidden lg:flex h-16 bg-white border-b border-slate-200 px-8 items-center justify-between sticky top-0 z-40">
            <div className="flex items-center gap-3">
              <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
@@ -99,9 +107,10 @@ export default async function EmployeeLayout({ children }) {
            </div>
           
           <div className="flex items-center gap-6">
+            {/* The alert bell */}
             <NotificationBell role="employee" theme="light" />
             
-            {/* Clickable Profile in Header */}
+            {/* User Profile section in the top right corner */}
             <Link href="/employee/profile" className="flex items-center gap-3 hover:bg-slate-50 p-1.5 pr-3 rounded-2xl transition-all group">
               <UserAvatar 
                 avatarUrl={profile.avatar_url} 
@@ -117,7 +126,7 @@ export default async function EmployeeLayout({ children }) {
           </div>
         </header>
 
-        {/* Viewport */}
+        {/* The actual content of the page goes here */}
         <main className="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
           <div className="max-w-[1200px] mx-auto">
             {children}

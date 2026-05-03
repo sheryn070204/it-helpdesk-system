@@ -1,8 +1,11 @@
+// Tell the computer this code runs in the browser
 "use client";
 
+// Import tools from React and Next.js
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import Link from "next/link"; // For clickable links
+import { supabase } from "@/lib/supabase"; // Connection to our database
+// Import icons for the dashboard
 import { 
   Inbox, 
   Clock, 
@@ -12,86 +15,132 @@ import {
   User,
   Ticket
 } from "lucide-react";
+// Import UI components (boxes, buttons, etc.)
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
-import { toast } from "sonner";
+import { toast } from "sonner"; // For popup messages
 
+// This is the IT Staff Dashboard page
 export default function ITStaffDashboard() {
+  // These "states" remember the numbers and the list of tickets
   const [stats, setStats] = useState({
     assigned: 0,
     in_progress: 0,
     resolved: 0,
   });
-  const [myTickets, setMyTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState(null);
+  const [myTickets, setMyTickets] = useState([]); // List of tickets assigned to me
+  const [loading, setLoading] = useState(true); // Is the page still loading?
+  const [profile, setProfile] = useState(null); // Current user's info
 
-  // Guard against double fetch
+  // This ensures we only load the data once
   const hasFetched = useRef(false);
 
+  // This part runs when the page first opens
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
-    fetchDashboardData();
+    fetchDashboardData(); // Get the data from the database
   }, []);
 
+  // This function gets all the information for the dashboard
   async function fetchDashboardData() {
-    setLoading(true);
+    setLoading(true); // Show the loading spinner
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // 1. Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw new Error("Session Error: " + sessionError.message);
+      
       const user = session?.user;
       if (!user) {
         setLoading(false);
         return;
       }
 
-      // Get profile
-      const { data: profileData } = await supabase
+      // 2. Get the user's profile info
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
       
-      setProfile(profileData);
+      if (profileError) {
+        console.warn("Profile fetch warning:", profileError);
+        // If profile is missing, we can still show a name from the auth system
+        setProfile(profileData || { full_name: user.email?.split('@')[0] });
+      } else {
+        setProfile(profileData);
+      }
 
+      // 3. Get tickets assigned to this staff member
       const { data: allTickets, error: statsError } = await supabase
         .from("tickets")
-        .select("*")
+        .select("status")
         .eq("assigned_to", user.id);
 
-      if (statsError) throw statsError;
-
-      if (allTickets) {
-        setStats({
-          assigned: allTickets.filter(t => t.status === 'open').length,
-          in_progress: allTickets.filter(t => t.status === 'in_progress').length,
-          resolved: allTickets.filter(t => t.status === 'resolved').length,
-        });
-
-        const { data: recentTickets, error: ticketsError } = await supabase
-          .from("tickets")
-          .select(`
-            id, title, priority, status, created_at, description,
-            submitter:profiles!tickets_submitted_by_fkey (full_name, avatar_url)
-          `)
-          .eq("assigned_to", user.id)
-          .neq("status", "resolved")
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (ticketsError) throw ticketsError;
-        setMyTickets(recentTickets || []);
+      if (statsError) {
+        console.error("Stats query failed:", statsError);
+        throw new Error("Tickets stats error: " + statsError.message);
       }
+
+      // Calculate stats safely
+      const ticketsArray = allTickets || [];
+      setStats({
+        assigned: ticketsArray.filter(t => t.status === 'open').length,
+        in_progress: ticketsArray.filter(t => t.status === 'in_progress').length,
+        resolved: ticketsArray.filter(t => t.status === 'resolved').length,
+      });
+
+      // 4. Get recent tickets (WITHOUT THE JOIN to avoid relationship errors)
+      const { data: recentTickets, error: ticketsError } = await supabase
+        .from("tickets")
+        .select(`id, title, priority, status, created_at, description, submitted_by`)
+        .eq("assigned_to", user.id)
+        .neq("status", "resolved")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (ticketsError) {
+        console.error("Recent tickets query failed:", ticketsError);
+        throw new Error("Tickets list error: " + ticketsError.message);
+      }
+
+      // 5. MANUALLY get the profiles for these tickets
+      if (recentTickets && recentTickets.length > 0) {
+        // Get all the IDs of people who submitted these tickets
+        const submitterIds = [...new Set(recentTickets.map(t => t.submitted_by))];
+        
+        const { data: profiles, error: pError } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .in("id", submitterIds);
+
+        if (!pError && profiles) {
+          // Combine the ticket info with the person's name manually
+          const mappedTickets = recentTickets.map(t => ({
+            ...t,
+            submitter: profiles.find(p => p.id === t.submitted_by)
+          }));
+          setMyTickets(mappedTickets);
+        } else {
+          setMyTickets(recentTickets); // Show tickets even if we can't find names
+        }
+      } else {
+        setMyTickets([]);
+      }
+
     } catch (err) {
-      console.error("Dashboard load error:", err);
-      toast.error("Could not load dashboard data.");
+      console.error("CRITICAL Dashboard Error:", err);
+      // Show the actual message so we can fix it!
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      toast.error(`Error: ${msg}`);
     } finally {
       setLoading(false);
     }
   }
 
+  // This function updates the status of a ticket (e.g., from New to Active)
   async function updateStatus(ticketId, newStatus) {
     const { error } = await supabase
       .from("tickets")
@@ -101,11 +150,13 @@ export default function ITStaffDashboard() {
     if (error) {
       toast.error("Failed to update status.");
     } else {
+      // Show a success message
       toast.success(newStatus === 'in_progress' ? "Task is now active" : "Ticket successfully resolved");
-      fetchDashboardData();
+      fetchDashboardData(); // Refresh the numbers on the screen
     }
   }
 
+  // A small component to show a colored priority label (Critical, High, etc.)
   const PriorityBadge = ({ priority }) => {
     const colors = {
       low: "bg-slate-100 text-slate-500 border-slate-200",
@@ -121,6 +172,7 @@ export default function ITStaffDashboard() {
     );
   };
 
+  // A small component to show a colored status label (New, Active, Done)
   const StatusBadge = ({ status }) => {
     const configs = {
       open: "bg-blue-600 text-white border-transparent",
@@ -141,6 +193,7 @@ export default function ITStaffDashboard() {
     );
   };
 
+  // If the page is still loading, show a spinner
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
@@ -150,13 +203,14 @@ export default function ITStaffDashboard() {
     );
   }
 
+  // Pick a greeting based on the time of day
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="p-8 max-w-[1200px] mx-auto space-y-12 animate-in fade-in duration-700">
       
-      {/* ─── GREETING HEADER ─── */}
+      {/* ─── GREETING HEADER (Hello message and today's date) ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200/60">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">
@@ -172,8 +226,9 @@ export default function ITStaffDashboard() {
         </div>
       </div>
 
-      {/* ─── STATS GRID ─── */}
+      {/* ─── STATS GRID (The three boxes at the top with numbers) ─── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Box for Assigned Tickets */}
         <StatCard 
           title="Assigned to me" 
           value={stats.assigned} 
@@ -182,6 +237,7 @@ export default function ITStaffDashboard() {
           bg="bg-blue-50" 
           sub="Pending Triage"
         />
+        {/* Box for Active Tickets */}
         <StatCard 
           title="In Progress" 
           value={stats.in_progress} 
@@ -190,6 +246,7 @@ export default function ITStaffDashboard() {
           bg="bg-amber-50"
           sub="Active Tasks"
         />
+        {/* Box for Resolved Tickets */}
         <StatCard 
           title="My Resolved" 
           value={stats.resolved} 
@@ -200,15 +257,17 @@ export default function ITStaffDashboard() {
         />
       </div>
 
-      {/* ─── TICKETS SECTION ─── */}
+      {/* ─── TICKETS SECTION (The list of tickets being worked on) ─── */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">My active queue</h2>
+            {/* Small label showing how many tickets are left */}
             <Badge className="bg-blue-600 text-white border-transparent h-6 px-3 text-[10px] font-black tracking-widest">
               {myTickets.length} REMAINING
             </Badge>
           </div>
+          {/* Link to see all tickets in the system */}
           <Link href="/it-staff/tickets">
             <Button variant="ghost" className="text-xs font-black text-blue-600 uppercase tracking-widest hover:bg-blue-50 transition-colors">
               Full Registry →
@@ -216,6 +275,7 @@ export default function ITStaffDashboard() {
           </Link>
         </div>
 
+        {/* If there are NO tickets, show a happy message */}
         {myTickets.length === 0 ? (
           <Card className="bg-white border-slate-200 border-dashed rounded-[32px] py-16 text-center shadow-sm">
             <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-emerald-100/50">
@@ -225,6 +285,7 @@ export default function ITStaffDashboard() {
             <p className="text-slate-500 text-sm mt-1 max-w-xs mx-auto">Your personal workspace is clear. Great job!</p>
           </Card>
         ) : (
+          // If there ARE tickets, show them in a list
           <div className="grid grid-cols-1 gap-4">
             {myTickets.map((ticket) => (
               <Card 
@@ -234,6 +295,7 @@ export default function ITStaffDashboard() {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                   <div className="space-y-4 flex-1 min-w-0">
                     <div className="flex items-center gap-3">
+                      {/* Priority and Status labels */}
                       <PriorityBadge priority={ticket.priority} />
                       <StatusBadge status={ticket.status} />
                     </div>
@@ -243,6 +305,7 @@ export default function ITStaffDashboard() {
                     </h3>
                     
                     <div className="flex items-center gap-4">
+                       {/* Show who submitted the ticket */}
                        <UserAvatar 
                           avatarUrl={ticket.submitter?.avatar_url} 
                           fullName={ticket.submitter?.full_name} 
@@ -261,7 +324,9 @@ export default function ITStaffDashboard() {
                     </div>
                   </div>
 
+                  {/* Buttons to take action on the ticket */}
                   <div className="flex items-center gap-3 pt-6 lg:pt-0 border-t lg:border-t-0 border-slate-50">
+                    {/* If it's a new ticket, show "Claim Task" */}
                     {ticket.status === 'open' && (
                       <Button 
                         onClick={() => updateStatus(ticket.id, 'in_progress')}
@@ -270,6 +335,7 @@ export default function ITStaffDashboard() {
                          Claim Task
                       </Button>
                     )}
+                    {/* If it's active, show "Resolve" */}
                     {ticket.status === 'in_progress' && (
                       <Button 
                         onClick={() => updateStatus(ticket.id, 'resolved')}
@@ -278,6 +344,7 @@ export default function ITStaffDashboard() {
                         Resolve
                       </Button>
                     )}
+                    {/* Link to see the full details of the ticket */}
                     <Link href={`/it-staff/tickets/${ticket.id}`}>
                       <Button 
                         variant="ghost" 
@@ -297,20 +364,26 @@ export default function ITStaffDashboard() {
   );
 }
 
+// This helper component creates a single statistic box (the boxes at the top)
 function StatCard({ title, value, icon: Icon, color, bg, sub }) {
   return (
     <Card className="bg-white border-slate-200 rounded-[32px] p-8 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden relative group">
+      {/* A large icon in the background for style */}
       <div className={`absolute top-0 right-0 p-10 opacity-[0.03] group-hover:scale-125 transition-transform duration-700 ${color}`}>
          <Icon className="w-24 h-24 rotate-12" />
       </div>
       <div className="flex items-center gap-4 mb-6">
+        {/* The colored icon circle */}
         <div className={`w-12 h-12 rounded-[18px] flex items-center justify-center ${bg} ${color} shadow-sm group-hover:scale-110 transition-transform`}>
           <Icon className="w-5 h-5" />
         </div>
+        {/* The title of the box */}
         <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">{title}</span>
       </div>
       <div>
+        {/* The main number */}
         <h3 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">{value}</h3>
+        {/* A small explanation under the number */}
         <p className="text-[10px] font-black text-slate-400 mt-4 uppercase tracking-[0.3em] ml-1">{sub}</p>
       </div>
     </Card>

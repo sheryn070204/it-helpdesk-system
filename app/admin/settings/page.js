@@ -1,7 +1,11 @@
+// Tell the computer this code runs in the browser
 "use client";
 
+// Import tools from React
 import { useState, useEffect } from "react";
+// Import connection to our database
 import { supabase } from "@/lib/supabase";
+// Import icons for the design
 import { 
   Users, 
   Search, 
@@ -9,10 +13,12 @@ import {
   Plus,
   Wrench
 } from "lucide-react";
+// Import clickable links and UI components
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+// Import tools to show a "pop-up" window for adding new people
 import { 
   Dialog, 
   DialogContent, 
@@ -23,32 +29,36 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Small popup messages
 import { UserAvatar } from "@/components/UserAvatar";
 
+// This is the Admin settings page for managing IT Staff
 export default function AdminSettings() {
+  // These "states" remember the list of IT people and if we are loading
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(""); // Remember what the admin is searching for
   
-  // New IT Staff Dialog State
-  const [isOpening, setIsOpening] = useState(false);
-  const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffEmail, setNewStaffEmail] = useState("");
-  const [newStaffPass, setNewStaffPass] = useState("");
-  const [creating, setCreating] = useState(false);
+  // These remember the info for the "Add New IT Staff" form
+  const [isOpening, setIsOpening] = useState(false); // If the popup is open
+  const [newStaffName, setNewStaffName] = useState(""); // Name for the new staff
+  const [newStaffEmail, setNewStaffEmail] = useState(""); // Email for the new staff
+  const [newStaffPass, setNewStaffPass] = useState(""); // Password for the new staff
+  const [creating, setCreating] = useState(false); // If we are busy creating the account
 
+  // Run this when the page opens to get the list of IT staff
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  // Function to get ALL IT staff members from the database
   async function fetchUsers() {
     setLoading(true);
-    // FETCH ONLY IT STAFF (as requested)
+    // FETCH ONLY users whose role is "it-staff"
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .eq("role", "it_staff")
+      .eq("role", "it-staff")
       .order("full_name", { ascending: true });
 
     if (!error && data) {
@@ -57,53 +67,59 @@ export default function AdminSettings() {
     setLoading(false);
   }
 
-  // CREATE NEW IT STAFF ACCOUNT
+  // This function creates a brand new IT Staff account
   async function handleAddStaff(e) {
-    e.preventDefault();
+    e.preventDefault(); // Stop the page from refreshing
     setCreating(true);
 
     try {
+      // Create the account in Supabase Authentication
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: newStaffEmail,
         password: newStaffPass,
         options: {
           data: {
             full_name: newStaffName,
-            role: 'it_staff'
+            role: 'it-staff' // Make sure they are IT staff
           }
         }
       });
 
       if (signUpError) throw signUpError;
 
+      // Show success message and clear the form
       toast.success("IT Staff account created!");
       setIsOpening(false);
       setNewStaffName("");
       setNewStaffEmail("");
       setNewStaffPass("");
-      fetchUsers();
+      fetchUsers(); // Refresh the list
     } catch (err) {
+      // Show error if something went wrong
       toast.error(err.message || "Failed to create account.");
     } finally {
       setCreating(false);
     }
   }
 
+  // Filter the list based on the search box
   const filteredUsers = users.filter((u) => {
     return u.full_name?.toLowerCase().includes(search.toLowerCase()) || 
            u.email?.toLowerCase().includes(search.toLowerCase());
   });
 
   return (
+    // Main container with spacing
     <div className="space-y-8 pb-20">
       
-      {/* ─── HEADER ─── */}
+      {/* ─── HEADER (Title and Add Button) ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">IT Staff</h1>
           <p className="text-slate-400 text-sm mt-1 font-medium">Manage your IT support team.</p>
         </div>
         
+        {/* "Add IT Staff" Pop-up Window */}
         <Dialog open={isOpening} onOpenChange={setIsOpening}>
           <DialogTrigger asChild>
             <Button className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl flex items-center gap-2 px-6 h-12 shadow-lg transition-transform active:scale-95">
@@ -119,6 +135,7 @@ export default function AdminSettings() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAddStaff} className="space-y-5" autoComplete="off">
+              {/* Name Input */}
               <div className="space-y-2">
                 <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Full Name</Label>
                 <Input 
@@ -131,6 +148,7 @@ export default function AdminSettings() {
                   required
                 />
               </div>
+              {/* Email Input */}
               <div className="space-y-2">
                 <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</Label>
                 <Input 
@@ -144,6 +162,7 @@ export default function AdminSettings() {
                   required
                 />
               </div>
+              {/* Password Input */}
               <div className="space-y-2">
                 <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Temporary Password</Label>
                 <Input 
@@ -161,6 +180,7 @@ export default function AdminSettings() {
                 * They can log in right away at the login page.
               </p>
               
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <Button 
                    type="button" 
@@ -183,7 +203,7 @@ export default function AdminSettings() {
         </Dialog>
       </div>
 
-      {/* ─── SEARCH (Dropdown role filter removed as requested) ─── */}
+      {/* ─── SEARCH BOX ─── */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -196,23 +216,27 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {/* ─── USER GRID ─── */}
+      {/* ─── IT STAFF GRID ─── */}
       {loading ? (
+        // Loading spinner
         <div className="py-20 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
           <p className="text-slate-500 text-sm">Loading IT staff...</p>
         </div>
       ) : filteredUsers.length === 0 ? (
+        // Empty message
         <div className="py-20 text-center bg-[#111113] rounded-2xl border border-white/5">
            <Users className="w-12 h-12 text-slate-700 mx-auto mb-4" />
            <h3 className="text-lg font-bold text-white">No IT staff members yet.</h3>
            <p className="text-slate-500 text-sm">Add your first IT staff member to start assigning tickets.</p>
         </div>
       ) : (
+        // Grid of staff cards
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map((user) => (
             <Card key={user.id} className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-6 hover:shadow-xl transition-all h-full">
               <div className="flex items-center gap-4 mb-8">
+                {/* Profile picture */}
                 <UserAvatar 
                   avatarUrl={user.avatar_url} 
                   fullName={user.full_name} 
@@ -229,10 +253,11 @@ export default function AdminSettings() {
                 </div>
               </div>
 
+              {/* Link to see all tickets assigned to this person */}
               <div className="flex gap-2 mt-auto">
                 <Button 
                   asChild
-                  className="w-full h-11 bg-[#111827] hover:bg-[#161d2e] text-indigo-400 hover:text-indigo-300 border border-[#2D3548] hover:border-indigo-500/50 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-none"
+                  className="w-full h-11 bg-[#111827] hover:bg-[#161d2e] text-indigo-400 hover:text-emerald-300 border border-[#2D3548] hover:border-indigo-500/50 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-none"
                 >
                   <Link href={`/admin/tickets?assigned_to=${user.id}`}>View Assigned Tickets</Link>
                 </Button>

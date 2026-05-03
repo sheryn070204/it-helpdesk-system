@@ -1,12 +1,14 @@
+// Tell the computer this code runs in the browser
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
+// Import the tools we need from React and other files
+import { useState } from 'react' // For remembering what the user types
+import { useRouter } from 'next/navigation' // For moving to different pages
+import { supabase } from '@/lib/supabase' // Our connection to the database
+import { Button } from '@/components/ui/button' // A nice looking button
+import { Input } from '@/components/ui/input' // A nice looking text box
+import { Label } from '@/components/ui/label' // Text labels for the boxes
+import { Card, CardContent } from '@/components/ui/card' // A box with a shadow
 import {
   Mail,
   Lock,
@@ -17,52 +19,77 @@ import {
   Zap,
   ShieldCheck,
   ArrowLeft,
-} from 'lucide-react'
-import { toast } from "sonner"
-import Link from 'next/link'
+} from 'lucide-react' // Icons for the design
+import { toast } from "sonner" // For showing little popup messages
+import Link from 'next/link' // For clickable links
 
+// This is the main function for our Register Page
 export default function RegisterPage() {
-  const router = useRouter()
+  const router = useRouter() // Create a tool to change pages
 
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  // These "states" remember what the user is typing in the form
+  const [fullName, setFullName] = useState('') // Remembers the full name
+  const [email, setEmail] = useState('') // Remembers the email
+  const [password, setPassword] = useState('') // Remembers the password
+  const [loading, setLoading] = useState(false) // Remembers if we are busy saving
+  const [error, setError] = useState(null) // Remembers if something went wrong
 
+  // This function runs when the user clicks the "Create Account" button
   const handleRegister = async (e) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault() // Stop the page from refreshing
+    setError(null) // Clear any old errors
 
+    // Check if the user filled in everything correctly
     if (!fullName.trim()) return setError('Please enter your full name.')
     if (!email.trim()) return setError('Please enter your email address.')
     if (!password.trim()) return setError('Please enter a password.')
     if (password.length < 6) return setError('Password must be at least 6 characters.')
 
-    setLoading(true)
+    setLoading(true) // Show the loading spinner
 
     try {
+      // 1. Ask Supabase to create a new login account
       const { data, error: authError } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
+        email: email.trim().toLowerCase(), // Use the email they typed
+        password: password.trim(), // Use the password they typed
         options: {
           data: {
-            full_name: fullName.trim(),
-            role: 'employee', // Default role
+            full_name: fullName.trim(), // Save their name too
+            role: 'employee', // Everyone who signs up starts as an Employee
           },
         },
       })
 
+      // If Supabase says something is wrong, stop and show the error
       if (authError) throw authError
 
-      toast.success("Account created! Please check your email to confirm.")
+      // 2. Create a "Profile" record in our database table
+      // This is so the Admin and IT Staff can see the employee's name on tickets
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: data.user.id, // Use the special ID from the new account
+            full_name: fullName.trim(), // Use the name they typed
+            role: 'employee', // Mark them as an employee
+          },
+        ])
+
+      // If creating the profile failed, log it in the background
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+      }
+
+      // If everything worked, show a success message and go to the login page
+      toast.success("Account created successfully!")
       router.push('/login')
 
     } catch (err) {
+      // If any step failed, show the error message to the user
       console.error('Registration error:', err)
       setError(err.message || 'Failed to create account. Please try again or contact IT.')
     } finally {
-      setLoading(false)
+      setLoading(false) // Hide the loading spinner
     }
   }
 

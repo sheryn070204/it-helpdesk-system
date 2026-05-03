@@ -1,11 +1,12 @@
+// This file helps catch mistakes in your code (like a spell checker for code)
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 
 const eslintConfig = defineConfig([
+  // Use the standard rules for Next.js projects
   ...nextVitals,
-  // Override default ignores of eslint-config-next.
+  // Tell the tool which folders it should NOT check
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
@@ -13,4 +14,5 @@ const eslintConfig = defineConfig([
   ]),
 ]);
 
+// Export the rules so the tool can use them
 export default eslintConfig;

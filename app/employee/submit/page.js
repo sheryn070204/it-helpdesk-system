@@ -1,8 +1,10 @@
+// Tell the computer this code runs in the browser
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+// Import the tools we need
+import { useState } from "react"; // For remembering what the user types
+import { useRouter } from "next/navigation"; // For moving to different pages
+import { supabase } from "@/lib/supabase"; // Our database connection
 import {
    Send,
    Loader2,
@@ -12,83 +14,94 @@ import {
    LifeBuoy,
    Zap,
    Info
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+} from "lucide-react"; // Icons for the design
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"; // UI boxes
+import { Input } from "@/components/ui/input"; // Text box for the title
+import { Textarea } from "@/components/ui/textarea"; // Big text box for details
+import { Button } from "@/components/ui/button"; // Clickable buttons
+import { Label } from "@/components/ui/label"; // Text labels
+import { toast } from "sonner"; // Small popup messages
+import { Badge } from "@/components/ui/badge"; // Small colored labels
+import Link from "next/link"; // For clickable links
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PRIORITY DETECTION LOGIC ── PRESERVED EXACTLY AS PER REQUIREMENTS
-// ─────────────────────────────────────────────────────────────────────────────
+// This list helps the computer guess how important a ticket is based on words
 const PRIORITY_RULES = [
    { keywords: ['urgent', 'emergency', 'asap', 'broken', 'stop', 'expose data'], priority: 'critical' },
    { keywords: ['slow', 'error', 'bug', 'failed', 'cannot access'], priority: 'high' },
    { keywords: ['help', 'question', 'request', 'change', 'new'], priority: 'medium' }
 ];
 
+// This function looks at the text and decides if it's high or low priority
 function detectPriority(text) {
-   const content = text.toLowerCase();
+   const content = text.toLowerCase(); // Make everything lowercase to check easily
    for (const rule of PRIORITY_RULES) {
+      // If any of the keywords are in the text, use that priority
       if (rule.keywords.some(k => content.includes(k))) {
          return rule.priority;
       }
    }
-   return 'low';
+   return 'low'; // If no keywords are found, it's low priority
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
+// Main function for the Submit Ticket page
 export default function SubmitTicketPage() {
-   const router = useRouter();
-   const [title, setTitle] = useState("");
-   const [description, setDescription] = useState("");
-   const [loading, setLoading] = useState(false);
+   const router = useRouter(); // Tool to change pages
+   const [title, setTitle] = useState(""); // Remembers the title typed
+   const [description, setDescription] = useState(""); // Remembers the description typed
+   const [loading, setLoading] = useState(false); // Remembers if we are busy saving
 
+   // This function runs when the user clicks "Submit"
    async function handleSubmit(e) {
-      e.preventDefault();
+      e.preventDefault(); // Stop the page from refreshing
+      
+      // Make sure the user didn't leave the title empty
       if (!title.trim()) {
          toast.error("Please give your request a title.");
          return;
       }
+      // Make sure the user didn't leave the description empty
       if (!description.trim()) {
          toast.error("Please describe the problem.");
          return;
       }
 
-      setLoading(true);
+      setLoading(true); // Show the loading spinner
+      
+      // Get the currently logged-in user's information
       const { data: { user } } = await supabase.auth.getUser();
 
+      // If they are not logged in, show an error
       if (!user) {
          toast.error("Session expired. Please sign in again.");
          setLoading(false);
          return;
       }
 
+      // Automatically guess the priority based on what they typed
       const priority = detectPriority(title + " " + description);
 
+      // Save the new ticket into the "tickets" table in our database
       const { error } = await supabase
          .from("tickets")
          .insert({
-            title: title.trim(),
-            description: description.trim(),
-            priority,
-            submitted_by: user.id,
-            status: "open",
+            title: title.trim(), // The title they typed
+            description: description.trim(), // The details they typed
+            priority, // The guessed priority
+            submitted_by: user.id, // Their special user ID
+            status: "open", // New tickets always start as "open"
          });
 
+      // If the database had an error, tell the user
       if (error) {
          toast.error("Something went wrong. Please try again or contact IT.");
          console.error(error.message);
       } else {
+         // If it worked, show a success message and go to the "My Requests" page
          toast.success("Request submitted! We've received your request.");
-         router.push("/employee/tickets"); // Redirect to My Requests
+         router.push("/employee/tickets"); 
          router.refresh();
       }
-      setLoading(false);
+      setLoading(false); // Hide the loading spinner
    }
 
    const getPriorityPreview = (p) => {

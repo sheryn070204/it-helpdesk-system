@@ -99,7 +99,7 @@ Think of Shadcn as a box of raw bricks. We use pieces like `Button`, `Badge`, an
 
 ## 🗡️ 6. The "Spelling Guard" Rule
 To prevent errors, I added a permanent **Gatekeeper** rule to your database. 
-*   **The Rule:** You can *only* use these three words for roles: `admin`, `it_staff`, or `employee`.
+*   **The Rule:** You can *only* use these three words for roles: `admin`, `it-staff`, or `employee`.
 *   **No more typos!** If anyone tries to use `it-staff` (hyphen), the database will block it. This is why our code is so fast and reliable now.
 
 ---

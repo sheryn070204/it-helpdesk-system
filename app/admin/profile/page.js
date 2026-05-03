@@ -1,8 +1,13 @@
+// Tell the computer this code runs in the browser
 'use client'
 
+// Import tools from React
 import { useState, useEffect } from "react"
+// Import connection to our database
 import { supabase } from "@/lib/supabase"
+// Import tool to upload profile pictures
 import { uploadAvatar } from "@/lib/uploadAvatar"
+// Import UI components and icons
 import { UserAvatar } from "@/components/UserAvatar"
 import { 
   Loader2, 
@@ -21,32 +26,38 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
-import Link from "next/link"
+import { toast } from "sonner" // Small popup messages
+import Link from "next/link" // For clickable links
 
+// This is the Admin Profile page
 export default function AdminProfilePage() {
+  // These "states" remember the user's data and if we are loading or saving
   const [profile, setProfile] = useState(null)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [uploading, setUploading] = useState(false)
   
-  // Form fields
+  // These remember the info typed in the forms
   const [fullName, setFullName] = useState("")
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  // These remember if we should show or hide the password text
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  // These remember password update status
   const [updatingPassword, setUpdatingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
 
+  // Run this when the page opens to get the admin's data
   useEffect(() => {
     fetchProfileData()
   }, [])
 
+  // Function to get the current admin's data from the database
   async function fetchProfileData() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -66,14 +77,16 @@ export default function AdminProfilePage() {
     setLoading(false)
   }
 
-  // UPLOAD AVATAR
+  // This function handles uploading a new profile picture
   async function handleAvatarUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
 
     setUploading(true)
     try {
+      // Upload the file to Supabase storage
       const publicUrl = await uploadAvatar(user.id, file)
+      // Update the page so the user sees their new picture
       setProfile({ ...profile, avatar_url: publicUrl })
       toast.success("Profile picture updated!")
     } catch (err) {
@@ -83,7 +96,7 @@ export default function AdminProfilePage() {
     }
   }
 
-  // UPDATE NAME
+  // This function saves the new name to the database
   async function handleUpdateName() {
     if (!fullName.trim()) return toast.error("Name cannot be empty.")
     
@@ -102,12 +115,12 @@ export default function AdminProfilePage() {
     setUpdating(false)
   }
 
-  // UPDATE PASSWORD
+  // This function handles changing the password securely
   const handleUpdatePassword = async () => {
     setPasswordError(null)
     setPasswordSuccess(false)
 
-    // --- Validation ---
+    // Check if the admin typed everything correctly
     if (!currentPassword.trim()) {
       setPasswordError('Please enter your current password.')
       return
@@ -136,8 +149,7 @@ export default function AdminProfilePage() {
     setUpdatingPassword(true)
 
     try {
-      // Step 1: Re-authenticate with current password
-      // This verifies the user knows their current password AND refreshes the session
+      // Step 1: Log in again with the current password to make sure it's correct
       const { error: reAuthError } = await supabase.auth.signInWithPassword({
         email: user?.email,
         password: currentPassword.trim(),
@@ -152,9 +164,7 @@ export default function AdminProfilePage() {
         return
       }
 
-      // Step 2: Update to new password
-      // NOTE: Supabase's "Secure Password Change" requires the current_password payload
-      // parameter. Omitting this results in a 400 Bad Request if the feature is enabled.
+      // Step 2: Update to the brand new password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword.trim(),
         current_password: currentPassword.trim()
@@ -171,7 +181,7 @@ export default function AdminProfilePage() {
         return
       }
 
-      // Success
+      // If everything worked, clear the form and show success
       setPasswordSuccess(true)
       setCurrentPassword('')
       setNewPassword('')
@@ -188,6 +198,7 @@ export default function AdminProfilePage() {
     }
   }
 
+  // If page is loading, show a spinner
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
@@ -198,8 +209,10 @@ export default function AdminProfilePage() {
   }
 
   return (
+    // Main container with dark mode and animation
     <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in duration-500">
       
+      {/* Back button to go to dashboard */}
       <Link href="/admin" className="text-slate-400 hover:text-white text-sm mb-8 flex items-center gap-2 group transition-colors">
         <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Dashboard
@@ -207,12 +220,13 @@ export default function AdminProfilePage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* ─── LEFT COLUMN: PROFILE CARD ─── */}
+        {/* ─── LEFT COLUMN: PROFILE PICTURE CARD ─── */}
         <div className="lg:col-span-1">
           <Card className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-8 text-center flex flex-col items-center shadow-2xl">
             
             <div className="relative inline-block mb-5">
               <div className="relative">
+                {/* Profile Picture */}
                 <UserAvatar 
                   avatarUrl={profile?.avatar_url} 
                   fullName={profile?.full_name} 
@@ -220,6 +234,7 @@ export default function AdminProfilePage() {
                   className="border-4 border-indigo-500/30"
                 />
                 
+                {/* Loading spinner for upload */}
                 {uploading && (
                   <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                     <Loader2 className="w-6 h-6 animate-spin text-white" />
@@ -227,6 +242,7 @@ export default function AdminProfilePage() {
                 )}
               </div>
               
+              {/* Camera Icon to change picture */}
               <label htmlFor="avatar-upload" className="cursor-pointer">
                 <div className="absolute bottom-1 right-1 w-9 h-9 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center border-2 border-[#1E2538] transition-colors cursor-pointer shadow-lg shadow-indigo-600/30">
                   <Camera className="w-4 h-4 text-white" />
@@ -257,9 +273,10 @@ export default function AdminProfilePage() {
           </Card>
         </div>
 
-        {/* ─── RIGHT COLUMN: DETAILS ─── */}
+        {/* ─── RIGHT COLUMN: SETTINGS FORMS ─── */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Edit Name Card */}
           <Card className="bg-[#1E2538] border-[#2D3548] rounded-2xl p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
               <User className="w-5 h-5 text-indigo-400" />
@@ -287,6 +304,7 @@ export default function AdminProfilePage() {
             </div>
           </Card>
           
+          {/* Account Security (Password) Card */}
           <Card className="bg-[#1E2538] border border-[#2D3548] rounded-2xl shadow-xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
@@ -299,7 +317,7 @@ export default function AdminProfilePage() {
             </CardHeader>
             <CardContent className="space-y-5 pt-2">
 
-              {/* Current password */}
+              {/* Current Password Input */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-300 ml-1">Current Password</Label>
                 <div className="relative">
@@ -311,6 +329,7 @@ export default function AdminProfilePage() {
                     placeholder="Enter your current password"
                     className="w-full bg-[#252B3B] border border-[#3D4663] text-white rounded-xl h-12 pl-12 pr-12 focus:border-indigo-500 transition-colors"
                   />
+                  {/* Eye button to show/hide text */}
                   <button
                     type="button"
                     onClick={() => setShowCurrent(!showCurrent)}
@@ -320,7 +339,7 @@ export default function AdminProfilePage() {
                 </div>
               </div>
 
-              {/* New password */}
+              {/* New Password Input */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-300 ml-1">New Password</Label>
                 <div className="relative">
@@ -341,7 +360,7 @@ export default function AdminProfilePage() {
                 </div>
               </div>
 
-              {/* Confirm new password */}
+              {/* Confirm New Password Input */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-300 ml-1">Confirm New Password</Label>
                 <div className="relative">
@@ -360,7 +379,7 @@ export default function AdminProfilePage() {
                     {showConfirm ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
                   </button>
                 </div>
-                {/* Password match indicator */}
+                {/* Match indicator */}
                 {confirmPassword && (
                   <p className={`text-sm font-medium flex items-center gap-1.5 mt-2 ml-1 ${newPassword === confirmPassword ? 'text-emerald-400' : 'text-red-400'}`}>
                     {newPassword === confirmPassword ? (
@@ -372,7 +391,7 @@ export default function AdminProfilePage() {
                 )}
               </div>
 
-              {/* Error message */}
+              {/* Error messages if the admin made a mistake */}
               {passwordError && (
                 <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mt-4">
                   <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5"/>
@@ -388,7 +407,7 @@ export default function AdminProfilePage() {
                 </div>
               )}
 
-              {/* Submit button */}
+              {/* Update Button */}
               <Button
                 onClick={handleUpdatePassword}
                 disabled={updatingPassword}

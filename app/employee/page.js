@@ -1,8 +1,11 @@
+// Tell the computer this code runs in the browser
 "use client";
 
+// Import tools from React and Next.js
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import Link from "next/link"; // For clickable links
+import { supabase } from "@/lib/supabase"; // Connection to our database
+// Import icons for the dashboard
 import { 
   PlusCircle, 
   Clock, 
@@ -16,50 +19,86 @@ import {
   ArrowUpRight,
   LayoutDashboard
 } from "lucide-react";
+// Import UI components for boxes and buttons
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
+// Import helpers to show colored labels for status and priority
 import { getStatusBadge, getPriorityBadge } from "@/lib/badgeHelpers";
 
+// This is the Employee Dashboard page
 export default function EmployeeDashboard() {
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // These "states" remember the tickets and if we are still loading
+  const [tickets, setTickets] = useState([]); // List of tickets
+  const [loading, setLoading] = useState(true); // Is it still loading?
+  // Remember the numbers for the top boxes
   const [stats, setStats] = useState({
     active: 0,
     resolved: 0,
     updates: 0
   });
 
+  // This part runs when the page first opens
   useEffect(() => {
-    fetchMyTickets();
+    fetchMyTickets(); // Get the user's tickets from the database
   }, []);
 
+  // This function gets all tickets submitted by the current user
   async function fetchMyTickets() {
-    setLoading(true);
+    setLoading(true); // Show the loading spinner
+    // Find out who is logged in
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return; // If no one is logged in, stop here
 
-    const { data, error } = await supabase
+    // 1. Get the user's tickets without any joins
+    const { data: ticketData, error: ticketError } = await supabase
       .from("tickets")
-      .select(`
-        id, title, status, priority, created_at,
-        assignee:profiles!tickets_assigned_to_fkey (full_name, avatar_url)
-      `)
-      .eq("submitted_by", user.id)
+      .select(`id, title, status, priority, created_at, assigned_to`)
+      .eq("submitted_by", user.id) // Only get tickets submitted by THIS user
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setTickets(data);
-      setStats({
-        active: data.filter(t => t.status !== 'resolved').length,
-        resolved: data.filter(t => t.status === 'resolved').length,
-        updates: data.length
-      });
+    if (ticketError) {
+      console.error("Dashboard fetch error:", ticketError);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // 2. MANUALLY get the profiles for the IT staff (assignees)
+    if (ticketData && ticketData.length > 0) {
+      const assigneeIds = [...new Set(ticketData.filter(t => t.assigned_to).map(t => t.assigned_to))];
+      
+      let profiles = [];
+      if (assigneeIds.length > 0) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .in("id", assigneeIds);
+        profiles = profileData || [];
+      }
+
+      // Combine them manually
+      const mappedData = ticketData.map(ticket => ({
+        ...ticket,
+        assignee: profiles.find(p => p.id === ticket.assigned_to)
+      }));
+
+      setTickets(mappedData);
+      
+      // Calculate stats
+      setStats({
+        active: mappedData.filter(t => t.status !== 'resolved').length,
+        resolved: mappedData.filter(t => t.status === 'resolved').length,
+        updates: mappedData.length
+      });
+    } else {
+      setTickets([]);
+      setStats({ active: 0, resolved: 0, updates: 0 });
+    }
+    setLoading(false); // Hide the loading spinner
   }
 
+  // If the page is still loading, show a spinner
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40 bg-slate-50 min-h-screen">
@@ -72,7 +111,7 @@ export default function EmployeeDashboard() {
   return (
     <div className="max-w-[1200px] mx-auto space-y-10 animate-in fade-in duration-700 pb-20">
       
-      {/* ─── HEADER ─── */}
+      {/* ─── HEADER (Title and "New Ticket" button) ─── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>
@@ -80,6 +119,7 @@ export default function EmployeeDashboard() {
         </div>
         
         <div className="flex items-center gap-4">
+           {/* Button to go to the "Submit Ticket" page */}
            <Link href="/employee/submit">
             <Button className="h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl shadow-xl shadow-indigo-600/20 px-8 group transition-all active:scale-95">
               <PlusCircle className="w-5 h-5 mr-3 group-hover:rotate-90 transition-transform duration-300" />
@@ -89,10 +129,10 @@ export default function EmployeeDashboard() {
         </div>
       </div>
 
-      {/* ─── STAT GRID ─── */}
+      {/* ─── STAT GRID (The three boxes at the top with numbers) ─── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Open */}
+        {/* Box for Open Tickets */}
         <Card className="bg-white border-none shadow-sm rounded-[32px] overflow-hidden group hover:shadow-xl transition-all duration-500">
            <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -108,7 +148,7 @@ export default function EmployeeDashboard() {
            </CardContent>
         </Card>
 
-        {/* Resolved */}
+        {/* Box for Resolved Tickets */}
         <Card className="bg-white border-none shadow-sm rounded-[32px] overflow-hidden group hover:shadow-xl transition-all duration-500">
            <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -124,7 +164,7 @@ export default function EmployeeDashboard() {
            </CardContent>
         </Card>
 
-        {/* Total */}
+        {/* Box for Total Tickets */}
         <Card className="bg-white border-none shadow-sm rounded-[32px] overflow-hidden group hover:shadow-xl transition-all duration-500">
            <CardContent className="p-8">
               <div className="flex items-center justify-between mb-6">
@@ -141,10 +181,10 @@ export default function EmployeeDashboard() {
         </Card>
       </div>
 
-      {/* ─── MAIN CONTENT ─── */}
+      {/* ─── MAIN CONTENT (The list of recent tickets) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
          
-         {/* ACTIVE TICKETS */}
+         {/* LEFT PART: List of tickets */}
          <div className="lg:col-span-8">
             <Card className="bg-white border-none shadow-2xl rounded-[32px] overflow-hidden">
                <CardHeader className="p-8 sm:p-10 border-b border-slate-50 flex flex-row items-center justify-between bg-slate-50/30">
@@ -157,13 +197,14 @@ export default function EmployeeDashboard() {
                         <CardDescription className="font-bold text-[10px] text-slate-400 uppercase tracking-widest mt-1">Your support history</CardDescription>
                      </div>
                   </div>
-                  <Link href="/employee/submit">
+                  <Link href="/employee/tickets">
                      <Button variant="ghost" className="font-black text-[10px] uppercase tracking-widest text-indigo-600 hover:text-indigo-700 hover:bg-transparent">
                         View All <ArrowUpRight className="ml-2 w-4 h-4" />
                      </Button>
                   </Link>
                </CardHeader>
                <CardContent className="p-0">
+                  {/* If there are NO tickets, show a friendly message */}
                   {tickets.length === 0 ? (
                     <div className="p-24 text-center">
                        <div className="w-20 h-20 bg-slate-50 rounded-[30px] border border-slate-100 mx-auto flex items-center justify-center text-slate-200 mb-6 shadow-inner">
@@ -176,11 +217,13 @@ export default function EmployeeDashboard() {
                        </Link>
                     </div>
                   ) : (
+                    // If there ARE tickets, show them in a list
                     <div className="divide-y divide-slate-50">
                       {tickets.map((ticket) => (
                         <Link key={ticket.id} href={`/employee/tickets/${ticket.id}`} className="block group">
                           <div className="p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 hover:bg-slate-50/50 transition-all duration-300 border-l-[6px] border-l-transparent hover:border-l-indigo-600">
                             <div className="flex items-center gap-6 flex-1 min-w-0">
+                               {/* Show the profile picture of the IT Staff working on the ticket */}
                                <div className="relative group-hover:scale-105 transition-transform duration-500">
                                   <UserAvatar 
                                     avatarUrl={ticket.assignee?.avatar_url} 
@@ -192,6 +235,7 @@ export default function EmployeeDashboard() {
                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-3 mb-2 flex-wrap">
                                      <h3 className="font-black text-slate-900 text-lg truncate tracking-tight">{ticket.title}</h3>
+                                     {/* Show the priority (Critical, High, etc.) */}
                                      {getPriorityBadge(ticket.priority)}
                                   </div>
                                   <div className="flex items-center gap-5 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
@@ -206,10 +250,11 @@ export default function EmployeeDashboard() {
                                </div>
                             </div>
                             <div className="flex items-center gap-6">
+                               {/* Show the status (Open, Resolved, etc.) */}
                                {getStatusBadge(ticket.status)}
                                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-sm">
                                   <ChevronRight className="w-5 h-5" />
-                               </div>
+                                </div>
                             </div>
                           </div>
                         </Link>
@@ -220,7 +265,7 @@ export default function EmployeeDashboard() {
             </Card>
          </div>
 
-         {/* SIDEBAR HELP */}
+         {/* RIGHT PART: Small help box */}
          <div className="lg:col-span-4 space-y-10">
             <Card className="bg-white border border-slate-100 shadow-sm rounded-[32px] overflow-hidden relative">
                <CardContent className="p-10 relative z-10">

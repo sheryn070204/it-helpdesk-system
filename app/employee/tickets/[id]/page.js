@@ -1,8 +1,11 @@
+// Tell the computer this code runs in the browser
 "use client";
 
+// Import tools from React and Next.js
 import { useState, useEffect, useCallback, use } from "react";
-import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import Link from "next/link"; // For clickable links
+import { supabase } from "@/lib/supabase"; // Connection to our database
+// Import icons for the design
 import { 
   Loader2, 
   ChevronLeft, 
@@ -15,32 +18,41 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   User,
-  Info
+  Info,
+  ImageIcon,
+  FileText
 } from "lucide-react";
+// Import UI components (boxes, buttons, labels)
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
+// Import helpers to show colored labels for status and priority
 import { getStatusBadge, getPriorityBadge } from "@/lib/badgeHelpers";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 
+// This is the Ticket Details page (shows one specific ticket)
 export default function TicketDetailPage({ params }) {
+  // Get the special ID of this ticket from the URL
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
 
+  // These "states" remember the ticket data and if we are loading
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); // Remember if something went wrong
 
+  // This function gets the ticket data from the database
   const fetchData = useCallback(async (id) => {
     setLoading(true);
     setError("");
 
+    // 1. Get the ticket details without any joins
     const { data: ticketData, error: ticketError } = await supabase
       .from("tickets")
       .select(`
-        id, title, description, priority, status, created_at,
-        assignee:profiles!tickets_assigned_to_fkey (full_name, avatar_url)
+        id, title, description, priority, status, created_at, assigned_to,
+        proof_url, resolution_notes
       `)
       .eq("id", id)
       .single();
@@ -51,16 +63,38 @@ export default function TicketDetailPage({ params }) {
       return;
     }
 
-    setTicket(ticketData);
-    setLoading(false);
+    // 2. MANUALLY get the profile for the IT staff (assignee)
+    if (ticketData.assigned_to) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", ticketData.assigned_to)
+        .single();
+      
+      if (profile) {
+        ticketData.assignee = profile;
+      }
+    }
+
+    // If there is an error (like the ticket doesn't exist), show a message
+    if (ticketError) {
+      setError("This ticket doesn't exist or you don't have permission to view it.");
+      setLoading(false);
+      return;
+    }
+
+    setTicket(ticketData); // Save the ticket data
+    setLoading(false); // Hide the loading spinner
   }, []);
 
+  // This part runs when the page opens or the ticket ID changes
   useEffect(() => {
     if (ticketId) {
       fetchData(ticketId);
     }
   }, [ticketId, fetchData]);
 
+  // If the page is still loading, show a spinner
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
@@ -70,6 +104,7 @@ export default function TicketDetailPage({ params }) {
     );
   }
 
+  // If there was an error, show an error message
   if (error && !ticket) {
     return (
       <Card className="max-w-2xl mx-auto mt-20 border-slate-200 shadow-xl bg-white rounded-[2rem]">
@@ -90,10 +125,12 @@ export default function TicketDetailPage({ params }) {
   }
 
   return (
+    // Main container with animation
     <div className="max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
-      {/* ─── HEADER ─── */}
+      {/* ─── HEADER (Back button and ID) ─── */}
       <div className="flex items-center justify-between mb-10">
+        {/* Go back to the list of all my tickets */}
         <Link href="/employee/tickets">
           <Button variant="ghost" className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-bold text-sm px-4 h-10 rounded-xl group transition-all">
             <ChevronLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
@@ -101,6 +138,7 @@ export default function TicketDetailPage({ params }) {
           </Button>
         </Link>
         
+        {/* Show the short ID of this ticket */}
         <div className="flex items-center gap-3">
            <Badge variant="outline" className="bg-white border-slate-200 text-slate-500 font-semibold px-4 py-2 rounded-xl shadow-sm">
              Ticket ID: {ticket.id.slice(0, 8).toUpperCase()}
@@ -110,10 +148,13 @@ export default function TicketDetailPage({ params }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
         
+        {/* Left Column (Main Ticket Info) */}
         <div className="lg:col-span-8 space-y-10">
           
+          {/* Main Card */}
           <Card className="bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden relative group transition-all">
             <CardContent className="p-10 sm:p-14 relative z-10">
+              {/* Badges for priority, status, and date */}
               <div className="flex flex-wrap items-center gap-4 mb-10">
                 {getPriorityBadge(ticket.priority)}
                 {getStatusBadge(ticket.status)}
@@ -124,10 +165,12 @@ export default function TicketDetailPage({ params }) {
                 </div>
               </div>
 
+              {/* Ticket Title */}
               <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight tracking-tight mb-12">
                 {ticket.title}
               </h1>
 
+              {/* Ticket Description Box */}
               <div className="space-y-6">
                 <Label className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
                   <MessageSquare className="w-4 h-4 text-blue-500" />
@@ -137,10 +180,55 @@ export default function TicketDetailPage({ params }) {
                   {ticket.description}
                 </div>
               </div>
+
+              {/* ─── RESOLUTION SECTION (Shown only if ticket is finished) ─── */}
+              {(ticket.status === 'resolved' || ticket.status === 'closed' || ticket.resolution_notes || ticket.proof_url) && (
+                <div className="mt-12 pt-12 border-t border-slate-100 space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-200">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-slate-900">Resolution Information</h3>
+                      <p className="text-sm font-medium text-slate-400 mt-1">Details about how your issue was resolved.</p>
+                    </div>
+                  </div>
+
+                  {/* Show the notes written by the IT staff */}
+                  {ticket.resolution_notes && (
+                    <div className="space-y-4">
+                      <Label className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
+                        <FileText className="w-4 h-4 text-green-500" />
+                        Staff Resolution Notes
+                      </Label>
+                      <div className="bg-green-50/30 border border-green-100/50 p-10 rounded-[2rem] text-slate-700 text-lg leading-relaxed font-medium">
+                        {ticket.resolution_notes}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Show the picture proof uploaded by the IT staff */}
+                  {ticket.proof_url && (
+                    <div className="space-y-4">
+                      <Label className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
+                        <ImageIcon className="w-4 h-4 text-green-500" />
+                        Proof of Work
+                      </Label>
+                      <div className="relative group overflow-hidden rounded-[2.5rem] border border-slate-200 bg-slate-50 p-4 shadow-xl shadow-slate-200/40">
+                        <img 
+                          src={ticket.proof_url} 
+                          alt="Resolution Proof" 
+                          className="w-full h-auto max-h-[600px] object-contain rounded-[1.8rem] transition-transform duration-700 group-hover:scale-[1.01]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
           
-          {/* Timeline */}
+          {/* ─── STATUS HISTORY (Timeline of what happened) ─── */}
           <Card className="bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden">
             <CardHeader className="p-10 border-b border-slate-50 bg-slate-50/30">
                <div className="flex items-center gap-4 text-slate-900">
@@ -155,8 +243,10 @@ export default function TicketDetailPage({ params }) {
             </CardHeader>
             <CardContent className="p-10 sm:p-14">
                <div className="space-y-12 relative text-slate-900">
+                 {/* Decorative vertical line */}
                  <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-100" />
                  
+                 {/* "Ticket Created" Step */}
                  <div className="flex items-start gap-10 relative">
                     <div className="mt-2 w-6 h-6 rounded-full bg-blue-600 border-4 border-white shadow-lg z-10 shrink-0" />
                     <div className="space-y-3">
@@ -170,6 +260,7 @@ export default function TicketDetailPage({ params }) {
                     </div>
                  </div>
 
+                 {/* "Ticket Resolved" Step (only shown if finished) */}
                  {ticket.status === 'resolved' && (
                     <div className="flex items-start gap-10 relative text-slate-900">
                        <div className="mt-2 w-6 h-6 rounded-full bg-green-500 border-4 border-white shadow-lg z-10 shrink-0" />
@@ -190,7 +281,7 @@ export default function TicketDetailPage({ params }) {
 
         </div>
 
-        {/* ─── RIGHT: STATUS PANEL ─── */}
+        {/* Right Column (Status Panel and IT Assigned) */}
         <div className="lg:col-span-4 space-y-10 sticky top-28">
           
           <Card className="bg-white border border-slate-200 shadow-xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden">
@@ -203,6 +294,7 @@ export default function TicketDetailPage({ params }) {
             <CardContent className="p-10 space-y-10">
                <div className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-8 flex flex-col items-center text-center shadow-inner group">
                   <div className="relative mb-6">
+                    {/* IT Person's Profile Picture */}
                     <UserAvatar 
                       avatarUrl={ticket.assignee?.avatar_url} 
                       fullName={ticket.assignee?.full_name} 
@@ -220,6 +312,7 @@ export default function TicketDetailPage({ params }) {
                   <p className="text-sm text-slate-500 font-medium leading-relaxed">A specialized technician will handle your request.</p>
                </div>
 
+               {/* Tracking status bar */}
                <div className="space-y-6 pt-4">
                   <div className="flex items-center justify-between px-2">
                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest tracking-widest">Status Tracking</p>
@@ -233,6 +326,7 @@ export default function TicketDetailPage({ params }) {
             </CardContent>
           </Card>
 
+          {/* Security Information Box */}
           <div className="bg-blue-600 text-white p-10 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                 <Info className="w-32 h-32" />

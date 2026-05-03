@@ -1,9 +1,12 @@
+// Tell the computer this code runs in the browser
 'use client'
 
+// Import all the tools we need from React and Next.js
 import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { uploadAvatar } from "@/lib/uploadAvatar"
+import { useRouter } from "next/navigation" // For changing pages
+import { supabase } from "@/lib/supabase" // Connection to our database
+import { uploadAvatar } from "@/lib/uploadAvatar" // Helper to upload profile pictures
+// Import icons for a better looking UI
 import { 
   Loader2, 
   Camera, 
@@ -16,63 +19,73 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react"
+// Import UI components (boxes, buttons, inputs, etc.)
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { toast } from "sonner"
+import { toast } from "sonner" // For small popup messages
 import Link from "next/link"
 
+// Main function for the IT Staff Profile page
 export default function ITStaffProfilePage() {
-  const router = useRouter()
+  const router = useRouter() // Tool to change pages
+  
+  // These "states" remember the profile info and if we are busy
   const [profile, setProfile] = useState(null)
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true) // Is the page still loading?
+  const [updating, setUpdating] = useState(false) // Is the name being updated?
+  const [uploading, setUploading] = useState(false) // Is a picture being uploaded?
+  const [error, setError] = useState(null) // Stores any error messages
   
-  // Form fields
-  const [fullName, setFullName] = useState("")
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  // Form fields for editing profile info
+  const [fullName, setFullName] = useState("") // Remembers the name typed in
+  const [currentPassword, setCurrentPassword] = useState("") // Remembers current password
+  const [newPassword, setNewPassword] = useState("") // Remembers new password
+  const [confirmPassword, setConfirmPassword] = useState("") // Remembers confirmed password
+  
+  // Toggles to show/hide the password text
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  
+  // States for password update status
   const [updatingPassword, setUpdatingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
 
-  // useRef to prevent double fetch in React Strict Mode
+  // This prevents the page from loading data twice
   const hasFetched = useRef(false)
 
+  // Run this when the page first opens
   useEffect(() => {
     if (hasFetched.current) return
     hasFetched.current = true
-
     fetchProfileData()
   }, [])
 
+  // Function to get the IT Staff's profile data from the database
   async function fetchProfileData() {
     setLoading(true)
     setError(null)
     
     try {
-      // Use getSession() instead of getUser() to avoid lock conflicts
+      // Find out who is currently logged in
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError) throw sessionError
       
       if (!session?.user) {
-        router.push("/login")
+        router.push("/login"); // If not logged in, go back to login
         return
       }
 
       const currentUser = session.user
       setUser(currentUser)
 
+      // Fetch the detailed profile (like full name and avatar)
       const { data, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -94,19 +107,22 @@ export default function ITStaffProfilePage() {
     }
   }
 
+  // Helper to get initials if there is no profile picture
   const getInitials = (name) => {
     if (!name) return "?"
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  // UPLOAD AVATAR
+  // This function runs when the user selects a NEW profile picture
   async function handleAvatarUpload(e) {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
     setUploading(true)
     try {
+      // Upload the picture to our storage folder
       const publicUrl = await uploadAvatar(user.id, file)
+      // Update the local state so the picture changes immediately on screen
       setProfile({ ...profile, avatar_url: publicUrl })
       toast.success("Profile picture updated!")
     } catch (err) {
@@ -116,12 +132,13 @@ export default function ITStaffProfilePage() {
     }
   }
 
-  // UPDATE NAME
+  // This function runs when the "Save Changes" button is clicked for the name
   async function handleUpdateName() {
     if (!fullName.trim()) return toast.error("Name cannot be empty.")
     
     setUpdating(true)
     try {
+      // Update the name in our profiles table
       const { error } = await supabase
         .from("profiles")
         .update({ full_name: fullName.trim() })
@@ -138,32 +155,28 @@ export default function ITStaffProfilePage() {
     }
   }
 
-  // UPDATE PASSWORD
+  // This function handles changing the password safely
   const handleUpdatePassword = async () => {
     setPasswordError(null)
     setPasswordSuccess(false)
 
-    // --- Validation ---
+    // --- Check if all fields are filled correctly ---
     if (!currentPassword.trim()) {
       setPasswordError('Please enter your current password.')
       return
     }
-
     if (!newPassword.trim()) {
       setPasswordError('Please enter a new password.')
       return
     }
-
     if (newPassword.length < 6) {
       setPasswordError('New password must be at least 6 characters long.')
       return
     }
-
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match. Please check and try again.')
       return
     }
-
     if (newPassword === currentPassword) {
       setPasswordError('Your new password must be different from your current password.')
       return
@@ -172,8 +185,7 @@ export default function ITStaffProfilePage() {
     setUpdatingPassword(true)
 
     try {
-      // Step 1: Re-authenticate with current password
-      // This verifies the user knows their current password AND refreshes the session
+      // Step 1: Re-sign in with current password to make sure it is really the user
       const { error: reAuthError } = await supabase.auth.signInWithPassword({
         email: user?.email,
         password: currentPassword.trim(),
@@ -188,26 +200,18 @@ export default function ITStaffProfilePage() {
         return
       }
 
-      // Step 2: Update to new password
-      // NOTE: Supabase's "Secure Password Change" requires the current_password payload
-      // parameter. Omitting this results in a 400 Bad Request if the feature is enabled.
+      // Step 2: Update to the NEW password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword.trim(),
         current_password: currentPassword.trim()
       })
 
       if (updateError) {
-        if (updateError.message?.includes('same password') || updateError.message?.includes('different from')) {
-          setPasswordError('New password must be different from your current one.')
-        } else if (updateError.message?.includes('weak') || updateError.message?.includes('short')) {
-          setPasswordError('Password is too weak. Please use at least 6 characters with a mix of letters and numbers.')
-        } else {
-          setPasswordError('Failed to update password. Please try again.')
-        }
+        setPasswordError('Failed to update password. Please try again.')
         return
       }
 
-      // Success
+      // If everything worked, show success and clear the fields
       setPasswordSuccess(true)
       setCurrentPassword('')
       setNewPassword('')
@@ -215,15 +219,13 @@ export default function ITStaffProfilePage() {
       setTimeout(() => setPasswordSuccess(false), 4000)
 
     } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Password update error:', err.message)
-      }
       setPasswordError('Something went wrong. Please try again.')
     } finally {
       setUpdatingPassword(false)
     }
   }
 
+  // Show a loading screen while fetching data
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
@@ -233,6 +235,7 @@ export default function ITStaffProfilePage() {
     )
   }
 
+  // Show an error message if loading failed
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
@@ -248,8 +251,10 @@ export default function ITStaffProfilePage() {
   }
 
   return (
+    // Main container for the profile page
     <div className="p-6 space-y-6 min-h-screen bg-slate-100 max-w-5xl mx-auto animate-in fade-in duration-500 pb-20">
       
+      {/* Back button to go to dashboard */}
       <div className="flex items-center gap-4">
         <Link href="/it-staff">
           <Button variant="ghost" className="text-slate-500 hover:text-slate-900 font-semibold px-0">
@@ -261,9 +266,10 @@ export default function ITStaffProfilePage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Profile Card */}
+        {/* ─── LEFT COLUMN: PROFILE CARD ─── */}
         <div className="lg:col-span-4">
           <Card className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col items-center text-center space-y-4">
+            {/* Avatar section with upload button */}
             <div className="relative inline-block">
               <Avatar className="h-24 w-24 ring-4 ring-slate-100">
                 <AvatarImage src={profile?.avatar_url} />
@@ -296,8 +302,9 @@ export default function ITStaffProfilePage() {
           </Card>
         </div>
 
-        {/* Forms */}
+        {/* ─── RIGHT COLUMN: FORMS ─── */}
         <div className="lg:col-span-8 space-y-6">
+          {/* Edit Name Section */}
           <Card className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <User className="w-5 h-5 text-blue-500" />
@@ -319,6 +326,7 @@ export default function ITStaffProfilePage() {
             </div>
           </Card>
           
+          {/* Change Password Section */}
           <Card className="bg-white border border-slate-200 rounded-2xl shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -331,7 +339,7 @@ export default function ITStaffProfilePage() {
             </CardHeader>
             <CardContent className="space-y-5 pt-2">
 
-              {/* Current password */}
+              {/* Input for Current Password */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-slate-700">
                   Current Password
@@ -354,7 +362,7 @@ export default function ITStaffProfilePage() {
                 </div>
               </div>
 
-              {/* New password */}
+              {/* Input for New Password */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-slate-700">
                   New Password
@@ -377,7 +385,7 @@ export default function ITStaffProfilePage() {
                 </div>
               </div>
 
-              {/* Confirm new password */}
+              {/* Input for Confirming New Password */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-slate-700">
                   Confirm New Password
@@ -398,7 +406,7 @@ export default function ITStaffProfilePage() {
                     {showConfirm ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
                   </button>
                 </div>
-                {/* Password match indicator */}
+                {/* Match indicator text */}
                 {confirmPassword && (
                   <p className={`text-sm font-medium flex items-center gap-1.5 mt-1 ${newPassword === confirmPassword ? 'text-green-600' : 'text-red-500'}`}>
                     {newPassword === confirmPassword ? (
@@ -410,7 +418,7 @@ export default function ITStaffProfilePage() {
                 )}
               </div>
 
-              {/* Error message */}
+              {/* Show error if update failed */}
               {passwordError && (
                 <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mt-4">
                   <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5"/>
@@ -418,7 +426,7 @@ export default function ITStaffProfilePage() {
                 </div>
               )}
 
-              {/* Success message */}
+              {/* Show success if password changed */}
               {passwordSuccess && (
                 <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-4">
                   <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0"/>
@@ -426,7 +434,7 @@ export default function ITStaffProfilePage() {
                 </div>
               )}
 
-              {/* Submit button */}
+              {/* Button to save the new password */}
               <Button
                 onClick={handleUpdatePassword}
                 disabled={updatingPassword}
