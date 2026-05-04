@@ -30,17 +30,17 @@ export default function LoginPage() {
   const router = useRouter() // Tool to change the page
 
   // These "states" remember what the user types and what is happening
-  const [email, setEmail] = useState('') // Remembers the email typed
-  const [password, setPassword] = useState('') // Remembers the password typed
-  const [showPassword, setShowPassword] = useState(false) // Remembers if the password should be visible
-  const [loading, setLoading] = useState(false) // Remembers if we are waiting for the database
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null) // Remembers if something went wrong
 
   // This function runs when the "Sign In" button is clicked
   const handleLogin = async (e) => {
-    e.preventDefault() // Stop the page from refreshing
-    setError(null) // Clear any old errors
-    setLoading(true) // Start the loading spinner
+    e.preventDefault() // Stop loading
+    setError(null)
+    setLoading(true)
 
     try {
       // 1. Ask Supabase to log the user in with email and password
@@ -64,11 +64,11 @@ export default function LoginPage() {
 
       // 3. Move the user to the correct dashboard based on their role
       if (profile?.role === 'admin') {
-        router.push('/admin') // Admins go to /admin
+        router.push('/admin')
       } else if (profile?.role === 'it-staff') {
-        router.push('/it-staff') // IT Staff go to /it-staff
+        router.push('/it-staff')
       } else if (profile?.role === 'employee') {
-        router.push('/employee') // Employees go to /employee
+        router.push('/employee')
       } else {
         setError('Your account role is not set up. Please contact your IT administrator.')
       }
@@ -202,7 +202,7 @@ export default function LoginPage() {
 
       {/* RIGHT SIDE — The actual login form */}
       <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12 lg:px-20 relative">
-        
+
         {/* Subtle dots pattern in the background */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
@@ -286,7 +286,7 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition p-1"
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5"/> : <Eye className="h-5 w-5"/>}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
