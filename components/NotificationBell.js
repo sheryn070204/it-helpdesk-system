@@ -95,11 +95,12 @@ export default function NotificationBell({ role = "employee", theme = "light" })
     setIsOpen(false); // Close the menu
     
     // Decide which page to go to based on the user's role
+    // FALLBACK: If ticket_id is missing from the notification, just go to the list page
     let route = "/employee/tickets"; 
     if (role === "admin") {
-      route = `/admin/tickets/${notif.ticket_id}`;
+      route = notif.ticket_id ? `/admin/tickets/${notif.ticket_id}` : "/admin/tickets";
     } else if (role === "it-staff") {
-      route = `/it-staff/tickets/${notif.ticket_id}`;
+      route = notif.ticket_id ? `/it-staff/tickets/${notif.ticket_id}` : "/it-staff/tickets";
     }
     router.push(route); // Go to the ticket page
   }

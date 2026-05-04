@@ -72,10 +72,7 @@ export default function StaffTicketDetailPage({ params }) {
       // Fetch the ticket data without any joins
       const { data: ticketData, error: ticketError } = await supabase
         .from("tickets")
-        .select(`
-          id, title, description, priority, status, created_at, assigned_to, submitted_by,
-          proof_url, resolution_notes
-        `)
+        .select("*")
         .eq("id", id)
         .single();
 

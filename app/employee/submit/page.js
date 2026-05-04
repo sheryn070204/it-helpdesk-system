@@ -26,8 +26,8 @@ import Link from "next/link"; // For clickable links
 
 // This list helps the computer guess how important a ticket is based on words
 const PRIORITY_RULES = [
-   { keywords: ['urgent', 'emergency', 'asap', 'broken', 'stop', 'expose data'], priority: 'critical' },
-   { keywords: ['slow', 'error', 'bug', 'failed', 'cannot access'], priority: 'high' },
+   { keywords: ['urgent', 'emergency', 'asap', 'broken', 'stop', 'expose data', 'hacked', 'hack'], priority: 'critical' },
+   { keywords: ['slow', 'error', 'bug', 'failed', 'cannot access', 'lag', 'corrupted', 'glitch'], priority: 'high' },
    { keywords: ['help', 'question', 'request', 'change', 'new'], priority: 'medium' }
 ];
 
@@ -53,7 +53,7 @@ export default function SubmitTicketPage() {
    // This function runs when the user clicks "Submit"
    async function handleSubmit(e) {
       e.preventDefault(); // Stop the page from refreshing
-      
+
       // Make sure the user didn't leave the title empty
       if (!title.trim()) {
          toast.error("Please give your request a title.");
@@ -66,7 +66,7 @@ export default function SubmitTicketPage() {
       }
 
       setLoading(true); // Show the loading spinner
-      
+
       // Get the currently logged-in user's information
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -96,9 +96,49 @@ export default function SubmitTicketPage() {
          toast.error("Something went wrong. Please try again or contact IT.");
          console.error(error.message);
       } else {
+         // --- NOTIFY ALL ADMINS ---
+         try {
+            // 1. Get the newly created ticket ID (we need it for the notification link)
+            const { data: newTicket } = await supabase
+               .from("tickets")
+               .select("id")
+               .eq("submitted_by", user.id)
+               .order("created_at", { ascending: false })
+               .limit(1)
+               .single();
+
+            if (newTicket) {
+               // 2. Find all users with the 'admin' role
+               const { data: admins } = await supabase
+                  .from("profiles")
+                  .select("id")
+                  .eq("role", "admin");
+
+               // 3. Send a notification to each admin
+               if (admins && admins.length > 0) {
+                  const { createNotification } = await import("@/lib/notifications");
+
+                  // Use Promise.all to send them all at once
+                  await Promise.all(
+                     admins.map(admin =>
+                        createNotification(
+                           admin.id,
+                           newTicket.id,
+                           "new_ticket",
+                           `🎫 New ticket submitted: '${title.trim()}' by ${user.user_metadata?.full_name || 'an employee'}`
+                        )
+                     )
+                  );
+               }
+            }
+         } catch (notifErr) {
+            console.error("Failed to notify admins:", notifErr);
+            // We don't show an error toast here because the ticket was already saved successfully
+         }
+
          // If it worked, show a success message and go to the "My Requests" page
          toast.success("Request submitted! We've received your request.");
-         router.push("/employee/tickets"); 
+         router.push("/employee/tickets");
          router.refresh();
       }
       setLoading(false); // Hide the loading spinner

@@ -95,7 +95,7 @@ export default function ITStaffDashboard() {
       // 4. Get recent tickets (WITHOUT THE JOIN to avoid relationship errors)
       const { data: recentTickets, error: ticketsError } = await supabase
         .from("tickets")
-        .select(`id, title, priority, status, created_at, description, submitted_by`)
+        .select("*")
         .eq("assigned_to", user.id)
         .neq("status", "resolved")
         .order("created_at", { ascending: false })

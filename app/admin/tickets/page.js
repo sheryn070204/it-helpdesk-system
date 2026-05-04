@@ -39,11 +39,40 @@ export default function AdminTicketsPage() {
   // Run this when the page opens or when URL filters change
   useEffect(() => {
     fetchTickets();
+
+    // --- REALTIME: Listen for new tickets ---
+    // This makes the page update automatically when an employee submits a ticket
+    const channel = supabase
+      .channel('admin_tickets_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        () => {
+          console.log("Realtime update: Refreshing tickets...");
+          fetchTickets(); // Refresh the list whenever any ticket changes or is added
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel); // Stop listening when the user leaves the page
+    };
   }, [assignedToId, submittedById]);
 
   // Function to get ALL tickets from the database
   async function fetchTickets() {
-    // 1. Get the tickets without any joins
+    setLoading(true);
+    // 1. Initialize the query for the tickets table
+    let query = supabase.from("tickets").select("*");
+
+    // Add filters if they are present in the URL (e.g. from the employee/staff detail pages)
+    if (assignedToId) {
+      query = query.eq("assigned_to", assignedToId);
+    }
+    if (submittedById) {
+      query = query.eq("submitted_by", submittedById);
+    }
+
     const { data: ticketData, error: ticketError } = await query.order("created_at", { ascending: false });
 
     if (ticketError) {
