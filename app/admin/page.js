@@ -1,12 +1,12 @@
 // Import the database tool for server-side code
 import { createClient } from "@/lib/supabaseServer";
-// Import icons for the dashboard
-import { 
-  Ticket, 
-  Users, 
-  CheckCircle2, 
-  Clock, 
-  ArrowUpRight, 
+//icons for dashboard
+import {
+  Ticket,
+  Users,
+  CheckCircle2,
+  Clock,
+  ArrowUpRight,
   Activity,
   Zap,
   ShieldCheck,
@@ -20,12 +20,12 @@ import Link from "next/link";
 import { getPriorityBadge, getStatusBadge } from "@/lib/badgeHelpers";
 import { UserAvatar } from "@/components/UserAvatar"; // User's profile picture component
 
-// This is the Admin Dashboard page
+// Admin Dashboard page
 export default async function AdminDashboard() {
   // Connect to the database
   const supabase = await createClient();
 
-  // 1. Fetch Data: Get all tickets without joins
+  // 1. Fetch data: Get all tickets without joins
   const { data: ticketData, error: ticketError } = await supabase
     .from("tickets")
     .select(`id, title, status, priority, created_at, submitted_by, assigned_to`)
@@ -56,7 +56,7 @@ export default async function AdminDashboard() {
     }));
 
     recentTickets = mappedData.slice(0, 8); // Only show 8
-    
+
     // Calculate stats
     stats = {
       total: mappedData.length,
@@ -69,7 +69,7 @@ export default async function AdminDashboard() {
   return (
     // Main container with animation
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
+
       {/* ─── DASHBOARD HEADER (Title and text) ─── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -81,38 +81,38 @@ export default async function AdminDashboard() {
       {/* ─── KPI GRID (The four boxes at the top with numbers) ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Tickets Box */}
-        <KpiCard 
-          title="TOTAL TICKETS" 
-          value={stats.total} 
-          icon={Activity} 
-          trend="" 
+        <KpiCard
+          title="TOTAL TICKETS"
+          value={stats.total}
+          icon={Activity}
+          trend=""
           color="text-indigo-400"
           bg="bg-indigo-500/10"
         />
         {/* Open Tickets Box */}
-        <KpiCard 
-          title="OPEN TICKETS" 
-          value={stats.open} 
-          icon={Zap} 
-          trend="" 
+        <KpiCard
+          title="OPEN TICKETS"
+          value={stats.open}
+          icon={Zap}
+          trend=""
           color="text-amber-400"
           bg="bg-amber-500/10"
         />
         {/* Resolved Tickets Box */}
-        <KpiCard 
-          title="RESOLVED" 
-          value={stats.resolved} 
-          icon={ShieldCheck} 
-          trend="" 
+        <KpiCard
+          title="RESOLVED"
+          value={stats.resolved}
+          icon={ShieldCheck}
+          trend=""
           color="text-emerald-400"
           bg="bg-emerald-500/10"
         />
         {/* Critical Tickets Box */}
-        <KpiCard 
-          title="CRITICAL" 
-          value={stats.critical} 
-          icon={AlertCircle} 
-          trend="" 
+        <KpiCard
+          title="CRITICAL"
+          value={stats.critical}
+          icon={AlertCircle}
+          trend=""
           color="text-red-400"
           bg="bg-red-500/10"
         />
@@ -120,7 +120,7 @@ export default async function AdminDashboard() {
 
       {/* ─── MAIN CONTENT ─── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        
+
         {/* Recent Tickets Table (Takes up most of the space) */}
         <div className="xl:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
@@ -154,9 +154,9 @@ export default async function AdminDashboard() {
                       <tr key={ticket.id} className="group hover:bg-white/[0.02] transition-colors h-24">
                         <td className="px-8 flex items-center gap-4 h-24">
                           {/* Show the profile picture of the person who submitted the ticket */}
-                          <UserAvatar 
-                            avatarUrl={ticket.submitter?.avatar_url} 
-                            fullName={ticket.submitter?.full_name} 
+                          <UserAvatar
+                            avatarUrl={ticket.submitter?.avatar_url}
+                            fullName={ticket.submitter?.full_name}
                             size="default"
                             className="w-11 h-11"
                           />
@@ -245,9 +245,8 @@ function KpiCard({ title, value, icon: Icon, trend, color, bg }) {
           <h3 className="text-4xl font-black text-white tracking-tighter leading-none">{value}</h3>
           {/* If there is extra info (trend), show it here */}
           {trend && (
-            <span className={`text-[10px] font-black uppercase tracking-widest ${
-              trend === 'Critical' ? 'text-red-500' : 'text-indigo-400'
-            }`}>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${trend === 'Critical' ? 'text-red-500' : 'text-indigo-400'
+              }`}>
               {trend}
             </span>
           )}
